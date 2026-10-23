@@ -1,72 +1,23 @@
-import React, { useState } from 'react';
-import { ArrowUp, Mail, MapPin, Phone, Shield, Send, Check } from 'lucide-react';
+import React from 'react';
+import { ArrowUp, Mail, MapPin, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface FooterProps {
-  onScrollToTop: () => void;
-  onNavigateSection: (sectionId: string) => void;
+  onScrollToTop?: () => void;
+  onNavigateSection?: (sectionId: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onScrollToTop, onNavigateSection }) => {
-  const [email, setEmail] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setSubscribed(true);
-    setTimeout(() => {
-      setSubscribed(false);
-      setEmail('');
-    }, 3000);
+export const Footer: React.FC<FooterProps> = ({ onScrollToTop }) => {
+  const handleScrollTop = () => {
+    if (onScrollToTop) {
+      onScrollToTop();
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   return (
-    <footer id="contact" className="border-t border-neutral-800 bg-black text-neutral-400 relative">
-      
-      {/* Upper Footer / Newsletter Banner */}
-      <div className="border-b border-neutral-800/80 py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-          <div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-white font-['Space_Grotesk']">
-              เข้าร่วมครอบครัว SADIDA FIRST DROP
-            </h3>
-            <p className="mt-2 text-sm text-neutral-400 max-w-lg">
-              รับสิทธิ์สั่งจองรองเท้าวิ่งและรองเท้าเดินรุ่นลิมิเต็ดสีดำ-ขาว ก่อนใคร พร้อมข่าวสารโปรโมชั่น
-            </p>
-          </div>
-
-          <form onSubmit={handleSubscribe} className="flex w-full md:w-auto items-center gap-2 max-w-md">
-            <div className="relative flex-grow">
-              <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="กรอกอีเมลของคุณ..."
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-white transition-colors"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-3 rounded-xl bg-white hover:bg-neutral-200 text-black font-semibold text-sm transition-all duration-200 flex items-center gap-2 shadow-md flex-shrink-0 cursor-pointer"
-            >
-              {subscribed ? (
-                <>
-                  <Check className="w-4 h-4 text-black" />
-                  <span>บันทึกแล้ว</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>ติดตาม</span>
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-      </div>
-
+    <footer id="contact-footer" className="border-t-2 border-black bg-black text-white relative">
       {/* Main Footer Links & Info Grid */}
       <div className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
@@ -74,29 +25,29 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop, onNavigateSection
           {/* Column 1: Brand Info & Logo */}
           <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl p-1.5 flex items-center justify-center border border-neutral-700 shadow-md">
-                <img src="/logo.jpg" alt="Sadida Brand Logo" className="w-full h-full object-contain mix-blend-multiply" />
+              <div className="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#ffffff]">
+                <img src="/logo.jpg" alt="Sadida Brand Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="text-2xl font-extrabold tracking-tighter text-white font-['Space_Grotesk'] leading-none">
+                <span className="text-2xl font-black tracking-tighter text-white font-['Space_Grotesk'] leading-none">
                   SADIDA
                 </span>
-                <span className="text-[10px] tracking-[0.25em] text-neutral-400 block mt-1">
-                  OFFICIAL FOOTWEAR
+                <span className="text-[10px] tracking-[0.25em] text-neutral-400 block font-bold mt-1">
+                  OFFICIAL FOOTWEAR • B&W
                 </span>
               </div>
             </div>
 
-            <p className="text-sm text-neutral-400 leading-relaxed font-light max-w-sm">
+            <p className="text-sm text-neutral-300 leading-relaxed font-normal max-w-sm">
               Sadida แบรนด์รองเท้าวิ่งและรองเท้าเดินที่คัดสรรวัสดุพรีเมียม โครงสร้างน้ำหนักเบา 
-              และเอกลักษณ์โทนสีขาว-ดำ สไตล์มินิมอลเหนือกาลเวลา
+              และเอกลักษณ์โทนสีดำกับสีขาว สไตล์มินิมอลเหนือกาลเวลา
             </p>
 
             <div className="flex items-center gap-3 pt-2">
               <a 
                 href="#instagram" 
                 onClick={(e) => e.preventDefault()}
-                className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-700 text-white hover:bg-white hover:text-black hover:border-white flex items-center justify-center transition-colors"
                 aria-label="Instagram"
               >
                 <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -108,7 +59,7 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop, onNavigateSection
               <a 
                 href="#facebook" 
                 onClick={(e) => e.preventDefault()}
-                className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-700 text-white hover:bg-white hover:text-black hover:border-white flex items-center justify-center transition-colors"
                 aria-label="Facebook"
               >
                 <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -118,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop, onNavigateSection
               <a 
                 href="#twitter" 
                 onClick={(e) => e.preventDefault()}
-                className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-600 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-700 text-white hover:bg-white hover:text-black hover:border-white flex items-center justify-center transition-colors"
                 aria-label="Twitter"
               >
                 <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
@@ -130,127 +81,89 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop, onNavigateSection
 
           {/* Column 2: Navigation Links */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
+            <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
               เมนูหน้าเว็บ
             </h4>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2.5 text-sm font-medium">
               <li>
-                <button 
-                  onClick={() => onNavigateSection('hero')} 
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  หน้าหลัก / แบนร์
-                </button>
+                <Link to="/" className="text-neutral-300 hover:text-white transition-colors">
+                  แบนร์ / หน้าหลัก
+                </Link>
               </li>
               <li>
-                <button 
-                  onClick={() => onNavigateSection('products')} 
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
+                <Link to="/products" className="text-neutral-300 hover:text-white transition-colors">
                   สินค้าทั้งหมด
-                </button>
+                </Link>
               </li>
               <li>
-                <button 
-                  onClick={() => onNavigateSection('brand')} 
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
-                  เรื่องราวแบรนด์ Sadida
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => onNavigateSection('contact')} 
-                  className="hover:text-white transition-colors cursor-pointer"
-                >
+                <Link to="/contact" className="text-neutral-300 hover:text-white transition-colors">
                   ติดต่อเรา
-                </button>
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Column 3: Category Highlights */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
+            <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
               ประเภทสินค้า (Categories)
             </h4>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2.5 text-sm font-medium">
               <li>
-                <button 
-                  onClick={() => onNavigateSection('products')} 
-                  className="hover:text-white transition-colors cursor-pointer flex items-center justify-between"
-                >
+                <Link to="/products?category=running" className="text-neutral-300 hover:text-white transition-colors flex items-center justify-between">
                   <span>รองเท้าวิ่ง (Running)</span>
-                  <span className="text-[10px] text-neutral-500 font-mono">cg_1</span>
-                </button>
+                  <span className="text-[10px] text-neutral-400 font-mono">cg_1</span>
+                </Link>
               </li>
               <li>
-                <button 
-                  onClick={() => onNavigateSection('products')} 
-                  className="hover:text-white transition-colors cursor-pointer flex items-center justify-between"
-                >
+                <Link to="/products?category=walking" className="text-neutral-300 hover:text-white transition-colors flex items-center justify-between">
                   <span>รองเท้าเดิน (Walking)</span>
-                  <span className="text-[10px] text-neutral-500 font-mono">cg_2</span>
-                </button>
+                  <span className="text-[10px] text-neutral-400 font-mono">cg_2</span>
+                </Link>
               </li>
-              <li className="pt-2 text-xs text-neutral-500">
+              <li className="pt-2 text-xs text-neutral-400">
                 รองรับขนาด: 6 UK – 13 UK
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Contact & Location (Teaser for Google Map page) */}
+          {/* Column 4: Contact & Location */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
+            <h4 className="text-xs font-black uppercase tracking-widest text-white mb-4 font-['Space_Grotesk']">
               ติดต่อและที่อยู่สตูดิโอ
             </h4>
             <div className="space-y-3 text-sm">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
-                <span className="text-xs text-neutral-400">
-                  Sadida Flagship Store, แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110 (มี Google Maps API ในหน้าติดต่อ)
+                <span className="text-xs text-neutral-300">
+                  Sadida Flagship Store, แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110
                 </span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-white flex-shrink-0" />
-                <span className="text-xs text-neutral-400 font-mono">02-999-8888, 089-123-4567</span>
+                <span className="text-xs text-neutral-300 font-mono">02-999-8888, 089-123-4567</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-white flex-shrink-0" />
-                <span className="text-xs text-neutral-400 font-mono">support@sadida.store</span>
+                <span className="text-xs text-neutral-300 font-mono">support@sadida.store</span>
               </div>
-            </div>
-
-            {/* Admin Backoffice Gateway Link */}
-            <div className="mt-6 pt-4 border-t border-neutral-800">
-              <a
-                href="#admin"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('หน้า Login สำหรับแอดมินและเจ้าของระบบ (Admin Portal) ตามข้อกำหนดใน requirement.md');
-                }}
-                className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-white transition-colors"
-              >
-                <Shield className="w-3.5 h-3.5 text-neutral-400" />
-                <span>เข้าสู่ระบบหลังบ้าน (Admin Only)</span>
-              </a>
             </div>
           </div>
 
         </div>
 
         {/* Bottom Bar: Copyright & Back to Top */}
-        <div className="mt-14 pt-8 border-t border-neutral-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
+        <div className="mt-14 pt-8 border-t border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400">
           <div>
-            © {new Date().getFullYear()} SADIDA Official. All rights reserved. ออกแบบสไตล์ขาว-ดำตาม wireframe.
+            © {new Date().getFullYear()} SADIDA Official. All rights reserved. ออกแบบสไตล์สีดำกับสีขาวตาม wireframe.
           </div>
 
           <div className="flex items-center gap-6">
-            <span>นโยบายความเป็นส่วนตัว</span>
-            <span>เงื่อนไขการให้บริการ</span>
+            <span className="hover:text-white cursor-pointer">นโยบายความเป็นส่วนตัว</span>
+            <span className="hover:text-white cursor-pointer">เงื่อนไขการให้บริการ</span>
             <button
-              onClick={onScrollToTop}
-              className="flex items-center gap-1.5 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              onClick={handleScrollTop}
+              className="flex items-center gap-1.5 text-white hover:underline transition-colors cursor-pointer font-bold"
             >
               <span>กลับสู่ด้านบน</span>
               <ArrowUp className="w-3.5 h-3.5" />

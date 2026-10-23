@@ -48,64 +48,13 @@ export const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-neutral-100 flex flex-col font-['Prompt'] selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-white text-black flex flex-col font-['Prompt'] selection:bg-black selection:text-white">
       
       {/* 1. Header / Navbar Navigation */}
-      <Navbar onNavigateSection={scrollToSection} />
+      <Navbar />
 
       {/* Grid Layout Rearranger Float Widget (สาธิตฟังก์ชันสลับองค์ประกอบแบบ Grid สำหรับแอดมินตาม requirement) */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          onClick={() => setShowGridManager(!showGridManager)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-black font-semibold text-xs shadow-2xl hover:bg-neutral-200 transition-all border border-neutral-300 cursor-pointer"
-          title="เครื่องมือสลับองค์ประกอบแบบ Grid"
-        >
-          <Sliders className="w-3.5 h-3.5" />
-          <span>จัดเลย์เอาต์ Grid (Admin Preview)</span>
-        </button>
-
-        {showGridManager && (
-          <div className="absolute bottom-12 right-0 w-80 bg-neutral-950 border border-neutral-700 rounded-2xl p-4 shadow-2xl text-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-              <span className="font-bold text-white uppercase font-['Space_Grotesk']">
-                จัดการบล็อกองค์ประกอบ
-              </span>
-              <span className="text-[10px] text-neutral-400">สำหรับเจ้าของร้าน</span>
-            </div>
-            <p className="text-[11px] text-neutral-400">
-              สลับลำดับบล็อกในหน้าแรกได้ทันทีโดยไม่ต้องเขียนโค้ดใหม่:
-            </p>
-            <div className="space-y-2">
-              {sectionOrder.map((sectionId, idx) => (
-                <div 
-                  key={sectionId}
-                  className="flex items-center justify-between p-2 rounded-lg bg-neutral-900 border border-neutral-800"
-                >
-                  <span className="text-neutral-200 truncate">{sectionLabels[sectionId]}</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      disabled={idx === 0}
-                      onClick={() => moveSection(idx, 'up')}
-                      className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 text-white"
-                      title="เลื่อนขึ้น"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      disabled={idx === sectionOrder.length - 1}
-                      onClick={() => moveSection(idx, 'down')}
-                      className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 text-white"
-                      title="เลื่อนลง"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      
 
       {/* Main Content Area - Rendered Dynamically based on Section Order */}
       <main className="flex-grow">
@@ -136,10 +85,7 @@ export const HomePage: React.FC = () => {
       </main>
 
       {/* 4. Footer Matching Wireframe */}
-      <Footer 
-        onScrollToTop={scrollToTop} 
-        onNavigateSection={scrollToSection} 
-      />
+      <Footer onScrollToTop={scrollToTop} />
 
       {/* Product Detail Modal */}
       <ProductDetailModal

@@ -20,24 +20,16 @@
   }
 }
 
-/* Custom sleek high-contrast scrollbar for horizontal product slider */
-.custom-scrollbar::-webkit-scrollbar {
-  height: 8px;
+/* Hide browser default scrollbar completely across all engines */
+.no-scrollbar {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f0f0f0;
-  border-radius: 9999px;
-  border: 1px solid #000000;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #000000;
-  border-radius: 9999px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #262626;
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Edge, Opera */
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Smooth scrolling */
