@@ -114,16 +114,33 @@ bun run build
 
 ---
 
-## 6. แผนงานสำหรับขั้นตอนถัดไป (Next Steps / Phase 2)
+## 6. ความคืบหน้าของระบบหลังบ้าน (Phase 2: Admin & Backend Completed)
 
-สิ่งที่ต้องพัฒนาต่อตามเอกสาร [requirement.md](./requirement.md) ในส่วนของระบบหลังบ้าน (Admin System):
-1. **หน้าเข้าสู่ระบบของแอดมิน (Admin Login)**
-   - ระบบยืนยันตัวตนด้วย Bun.password hash และจัดเก็บ JWT ใน httpOnly Cookie
-2. **หน้าแดชบอร์ดแอดมิน (Admin Dashboard)**
-   - สรุปสถิติสินค้า ข้อความติดต่อ และภาพรวมหลังบ้าน
-3. **ระบบจัดการสินค้า (Product Management CRUD)**
-   - เพิ่ม ลบ แก้ไข รายการรองเท้า และการอัปโหลดไฟล์รูปภาพเข้าฐานข้อมูลตามเงื่อนไข
-4. **หน้ารายการติดต่อ (Contact Inquiries)**
-   - ดูรายละเอียดข้อความที่ผู้ใช้ส่งมาจากหน้าติดต่อ
-5. **ระบบจัดการเลย์เอาต์หน้าเว็บ (Site Customizer / Grid Manager)**
-   - แอดมินสามารถสลับตำแหน่งบล็อกองค์ประกอบแบบ Grid ใน 3 หน้าหลักได้โดยไม่ต้องเขียนโค้ดแก้เอง
+> 📄 **เอกสารรายละเอียดฉบับเต็ม:** ดูได้ที่ [`guide/handoff-admin.md`](./handoff-admin.md)
+
+| ส่วนงาน | สถานะ | รายละเอียด |
+| :--- | :---: | :--- |
+| **ฐานข้อมูลและการ Seed ข้อมูล** | ✅ สำเร็จ | นำเข้า Roles, Users (Admin & Owner), Categories, 15 Product Details (ไซส์ UK), 6 รายการสินค้าพร้อม Binary Image (`bytea`) |
+| **Authentication API** | ✅ สำเร็จ | `POST /api/auth/login`, `GET /api/auth/me` ตรวจสอบสิทธิ์ Admin/Owner |
+| **Admin Products API** | ✅ สำเร็จ | CRUD สินค้า, Endpoint สถิติ และเสิร์ฟรูปภาพไบนารีจากฐานข้อมูล |
+| **Admin Contacts API** | ✅ สำเร็จ | ดูรายการข้อความ, ดูรายละเอียดข้อความ, ลบข้อความ และสถิติสำหรับ Dashboard |
+| **Server Routing** | ✅ สำเร็จ | เชื่อมต่อ Route ทั้งหมดใน `server/src/index.ts` ทดสอบการรันผ่านสมบูรณ์ |
+
+---
+
+## 7. แผนงานสำหรับขั้นตอนถัดไป (Next Steps)
+
+สิ่งที่ต้องพัฒนาต่อในฝั่ง Frontend เพื่อเชื่อมต่อกับ Backend ที่เตรียมไว้:
+1. **หน้าเข้าสู่ระบบของแอดมิน (Admin Login - `/admin/login`)**:
+   - หน้า Login ดีไซน์โมเดิร์นสีขาว-ดำ รองรับ Admin และ Owner
+2. **หน้าแดชบอร์ดแอดมิน (Admin Dashboard - `/admin/dashboard`)**:
+   - แสดงการ์ดสถิติและกราฟสรุปข้อมูลจาก `/api/admin/products/stats` และ `/api/admin/contacts/stats`
+3. **ระบบจัดการสินค้า (Product Management - `/admin/products`)**:
+   - หน้าตารางสินค้า CRUD พร้อมป็อปอัปเพิ่ม/แก้ไข และระบบอัปโหลดรูปภาพ
+4. **หน้ารายการติดต่อ (Contact Inquiries - `/admin/contacts`)**:
+   - กล่องข้อความและรายละเอียดที่ผู้ใช้ส่งมา
+5. **ระบบจัดการเลย์เอาต์หน้าเว็บ (Site Customizer - `/admin/layout`)**:
+   - สลับบล็อก Grid Layout ของหน้าแรก หน้าสินค้า และหน้าติดต่อ
+6. **เชื่อมต่อหน้าบ้านเข้ากับ API จริง**:
+   - ปรับหน้าแรกและหน้าสินค้าให้ดึงข้อมูลจาก Database API แทน Mock Data
+

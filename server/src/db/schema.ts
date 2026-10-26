@@ -1,24 +1,5 @@
-import { pgTable, varchar, doublePrecision, customType } from "drizzle-orm/pg-core";
+import { pgTable, varchar, doublePrecision } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-
-// Custom type for PostgreSQL bytea column
-export const bytea = customType<{ data: Uint8Array | string; driverData: Uint8Array | string }>({
-  dataType() {
-    return "bytea";
-  },
-  toDriver(val) {
-    if (typeof val === "string") {
-      return new TextEncoder().encode(val);
-    }
-    return val;
-  },
-  fromDriver(val) {
-    if (val instanceof Uint8Array) {
-      return new TextDecoder().decode(val);
-    }
-    return val as string;
-  },
-});
 
 // 1. categories
 export const categories = pgTable("categories", {
@@ -33,12 +14,12 @@ export const productDetail = pgTable("product_detail", {
   price: doublePrecision("price").notNull(),
 });
 
-// 3. product
+// 3. product — img เก็บเป็น path ของไฟล์รูปภาพ (เช่น "/images/shoe_runner_1.jpg")
 export const product = pgTable("product", {
   proId: varchar("pro_id", { length: 20 }).primaryKey(),
   proName: varchar("pro_name", { length: 50 }).notNull(),
   description: varchar("description", { length: 100 }).notNull(),
-  img: bytea("img").notNull(),
+  img: varchar("img", { length: 200 }).notNull(),
   prodetailId: varchar("prodetail_id", { length: 12 })
     .notNull()
     .references(() => productDetail.prodetailId),
