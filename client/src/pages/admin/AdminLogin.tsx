@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, ShieldCheck } from 'lucide-react';
+import { setCookie } from '../../utils/cookies';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -31,8 +32,9 @@ export const AdminLogin: React.FC = () => {
         return;
       }
 
-      // Store user data in localStorage
-      localStorage.setItem('sadida_admin', JSON.stringify(data.data));
+      // Store user data in Cookie (expire in 7 days)
+      setCookie('sadida_admin', JSON.stringify(data.data), 7);
+      localStorage.removeItem('sadida_admin');
       navigate('/admin/dashboard');
     } catch {
       setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');

@@ -83,7 +83,15 @@ router.post("/categories", async (c) => {
       return c.json({ success: false, error: "กรุณาระบุชื่อหมวดหมู่" }, 400);
     }
     const all = await db.select().from(categories);
-    const newId = categoryId || `cg_${all.length + 1}`;
+    let maxNum = 0;
+    for (const item of all) {
+      const match = item.categoryId.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+    const newId = categoryId?.trim() || `cg_${maxNum + 1}`;
     await db.insert(categories).values({
       categoryId: newId,
       categoryName: categoryName.trim(),
@@ -101,6 +109,17 @@ router.post("/categories", async (c) => {
       { success: false, error: "Failed to create category", details: error?.message },
       500
     );
+  }
+});
+
+// DELETE /api/admin/products/categories/:id — delete category
+router.delete("/categories/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.delete(categories).where(eq(categories.categoryId, id));
+    return c.json({ success: true, message: "ลบหมวดหมู่เรียบร้อยแล้ว" });
+  } catch (error: any) {
+    return c.json({ success: false, error: "Failed to delete category", details: error?.message }, 500);
   }
 });
 
@@ -134,10 +153,18 @@ router.post("/upload", async (c) => {
   }
 });
 
-// GET /api/admin/products/product-details/all — list all sizes
+// GET /api/admin/products/product-details/all — list all sizes with price
 router.get("/product-details/all", async (c) => {
   try {
-    const details = await db.select().from(productDetail);
+    const details = await db
+      .select({
+        prodetailId: productDetail.prodetailId,
+        proId: productDetail.proId,
+        prodetailSize: productDetail.prodetailSize,
+        price: product.price,
+      })
+      .from(productDetail)
+      .leftJoin(product, eq(productDetail.proId, product.proId));
     return c.json({ success: true, data: details });
   } catch (error: any) {
     return c.json(
@@ -236,7 +263,7 @@ router.get("/:id", async (c) => {
 router.post("/", async (c) => {
   try {
     const body = await c.req.json();
-    const {
+    let {
       proId,
       proName,
       description,
@@ -249,14 +276,29 @@ router.post("/", async (c) => {
       prodetailSize,
     } = body;
 
-    if (!proId || !proName || !description || !categoryId) {
-      return c.json({ success: false, error: "Missing required fields" }, 400);
+    if (!proName || !description || !categoryId) {
+      return c.json({ success: false, error: "Missing required fields (proName, description, categoryId)" }, 400);
+    }
+
+    // Auto-generate proId if not provided
+    let finalProId = proId?.trim();
+    if (!finalProId) {
+      const allProds = await db.select({ proId: product.proId }).from(product);
+      let maxNum = 0;
+      for (const p of allProds) {
+        const match = p.proId.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+      finalProId = `pro_${String(maxNum + 1).padStart(3, "0")}`;
     }
 
     const finalPrice = Number(price !== undefined ? price : customPrice) || 0;
 
     await db.insert(product).values({
-      proId,
+      proId: finalProId,
       proName,
       description,
       img: img || "/images/shoe_runner_1.jpg",
@@ -266,7 +308,15 @@ router.post("/", async (c) => {
 
     // Handle sizes inserting into productDetail
     const allDetails = await db.select().from(productDetail);
-    let nextDetailIndex = allDetails.length + 1;
+    let maxDetailNum = 0;
+    for (const d of allDetails) {
+      const match = d.prodetailId.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxDetailNum) maxDetailNum = num;
+      }
+    }
+    let nextDetailIndex = maxDetailNum + 1;
 
     const sizesToInsert: string[] = [];
     if (Array.isArray(sizes) && sizes.length > 0) {
@@ -284,13 +334,13 @@ router.post("/", async (c) => {
       const detailId = `pdd_${String(nextDetailIndex++).padStart(3, "0")}`;
       await db.insert(productDetail).values({
         prodetailId: detailId,
-        proId: proId,
+        proId: finalProId,
         prodetailSize: formatted,
       });
     }
 
     return c.json(
-      { success: true, message: "เพิ่มสินค้าเรียบร้อยแล้ว", data: { proId } },
+      { success: true, message: "เพิ่มสินค้าเรียบร้อยแล้ว", data: { proId: finalProId } },
       201
     );
   } catch (error: any) {
@@ -344,7 +394,15 @@ router.put("/:id", async (c) => {
     if (sizesToUpdate.length > 0) {
       await db.delete(productDetail).where(eq(productDetail.proId, id));
       const allDetails = await db.select().from(productDetail);
-      let nextDetailIndex = allDetails.length + 1;
+      let maxDetailNum = 0;
+      for (const d of allDetails) {
+        const match = d.prodetailId.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxDetailNum) maxDetailNum = num;
+        }
+      }
+      let nextDetailIndex = maxDetailNum + 1;
       for (const s of sizesToUpdate) {
         const rawSize = String(s).trim();
         if (!rawSize) continue;

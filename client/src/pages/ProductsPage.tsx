@@ -35,13 +35,14 @@ export const ProductsPage: React.FC = () => {
     return 'all';
   };
 
-  const [allProducts, setAllProducts] = useState<Product[]>(getCachedProducts());
-  const [categories, setCategories] = useState<CategoryItem[]>(getCachedCategories());
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(getInitialCategory());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   useEffect(() => {
     loadAllProducts().then((p) => {
@@ -199,148 +200,158 @@ export const ProductsPage: React.FC = () => {
           
           {/* LEFT COLUMN: Navbar Menu (Sidebar filter matching wireframe) */}
           {showSidebar && (
-            <aside className="lg:col-span-3 bg-white border-2 border-black rounded-3xl p-6 shadow-[6px_6px_0px_#000000] sticky top-28">
-              <div className="flex items-center justify-between pb-4 border-b-2 border-black mb-6">
-                <div className="flex items-center gap-2">
+            <aside className="lg:col-span-3 bg-white border-2 border-black rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-[4px_4px_0px_#000000] sm:shadow-[6px_6px_0px_#000000] static lg:sticky lg:top-24 z-10 w-full">
+              <div className="flex items-center justify-between pb-3 sm:pb-4 border-b-2 border-black mb-3 sm:mb-6">
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+                  className="flex items-center gap-2 cursor-pointer lg:cursor-default"
+                >
                   <Filter className="w-5 h-5 text-black" />
                   <h2 className="text-base font-black uppercase tracking-wider font-['Space_Grotesk']">
                     {sidebarTitle}
                   </h2>
-                </div>
-              <button
-                onClick={handleResetFilters}
-                className="text-xs font-bold text-neutral-600 hover:text-black flex items-center gap-1 cursor-pointer"
-                title="ล้างตัวกรอง"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>รีเซ็ต</span>
-              </button>
-            </div>
-
-            {/* Filter Group 1: Category Menu */}
-            <div className="mb-6">
-              <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
-                หมวดหมู่สินค้า
-              </label>
-              <div className="space-y-2">
-                <button
-                  onClick={() => handleCategoryChange('all')}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                    selectedCategory === 'all'
-                      ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
-                      : 'bg-white hover:bg-neutral-100 text-black border-black'
-                  }`}
-                >
-                  <span>สินค้าทั้งหมด</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'all' ? 'bg-white text-black' : 'bg-neutral-200 text-black'}`}>
-                    {allProducts.length}
+                  <span className="lg:hidden text-[11px] font-bold px-2 py-0.5 rounded-md bg-neutral-100 border border-black text-black">
+                    {mobileFilterOpen ? 'ซ่อนตัวกรอง ▲' : 'เปิดตัวกรอง ▼'}
                   </span>
                 </button>
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs font-bold text-neutral-600 hover:text-black flex items-center gap-1 cursor-pointer"
+                  title="ล้างตัวกรอง"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>รีเซ็ต</span>
+                </button>
+              </div>
 
-                {uniqueCategories.map((cat) => {
-                  const count = allProducts.filter(
-                    (p) => p.categoryName === cat.categoryName || p.categoryId === cat.categoryId
-                  ).length;
-                  const isSelected = selectedCategory === cat.categoryName;
-                  return (
+              {/* Filter Groups: Accordion on mobile, always visible on desktop */}
+              <div className={`${mobileFilterOpen ? 'block' : 'hidden lg:block'} space-y-6 pt-1`}>
+                {/* Filter Group 1: Category Menu */}
+                <div>
+                  <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
+                    หมวดหมู่สินค้า
+                  </label>
+                  <div className="space-y-2">
                     <button
-                      key={cat.categoryId}
-                      onClick={() => handleCategoryChange(cat.categoryName)}
+                      onClick={() => handleCategoryChange('all')}
                       className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                        isSelected
+                        selectedCategory === 'all'
                           ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
                           : 'bg-white hover:bg-neutral-100 text-black border-black'
                       }`}
                     >
-                      <span className="truncate">{cat.categoryName}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] ${
-                          isSelected ? 'bg-white text-black' : 'bg-neutral-200 text-black'
-                        }`}
-                      >
-                        {count}
+                      <span>สินค้าทั้งหมด</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'all' ? 'bg-white text-black' : 'bg-neutral-200 text-black'}`}>
+                        {allProducts.length}
                       </span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* Filter Group 2: UK Size Filter */}
-            <div className="mb-6 pt-5 border-t-2 border-neutral-100">
-              <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
-                ขนาดรองเท้า (UK Size)
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setSelectedSize('all')}
-                  className={`py-1.5 px-2 text-xs font-mono font-bold rounded-lg border-2 transition-all cursor-pointer ${
-                    selectedSize === 'all'
-                      ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
-                      : 'bg-white hover:bg-neutral-100 text-black border-black'
-                  }`}
-                >
-                  ทั้งหมด
-                </button>
-                {allSizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`py-1.5 px-2 text-xs font-mono font-bold rounded-lg border-2 transition-all cursor-pointer ${
-                      selectedSize === size
-                        ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
-                        : 'bg-white hover:bg-neutral-100 text-black border-black'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    {uniqueCategories.map((cat) => {
+                      const count = allProducts.filter(
+                        (p) => p.categoryName === cat.categoryName || p.categoryId === cat.categoryId
+                      ).length;
+                      const isSelected = selectedCategory === cat.categoryName;
+                      return (
+                        <button
+                          key={cat.categoryId}
+                          onClick={() => handleCategoryChange(cat.categoryName)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
+                              : 'bg-white hover:bg-neutral-100 text-black border-black'
+                          }`}
+                        >
+                          <span className="truncate">{cat.categoryName}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] ${
+                              isSelected ? 'bg-white text-black' : 'bg-neutral-200 text-black'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            {/* Filter Group 3: Price Range */}
-            <div className="pt-5 border-t-2 border-neutral-100">
-              <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
-                ช่วงราคา
-              </label>
-              <div className="space-y-2 text-xs font-bold">
-                {[
-                  { id: 'all', label: 'ทุกช่วงราคา' },
-                  { id: 'under-1800', label: 'ต่ำกว่า ฿1,800' },
-                  { id: '1800-2200', label: '฿1,800 - ฿2,200' },
-                  { id: 'above-2200', label: 'มากกว่า ฿2,200' },
-                ].map((item) => (
-                  <label 
-                    key={item.id} 
-                    className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-neutral-100 rounded-lg"
-                  >
-                    <input
-                      type="radio"
-                      name="priceRange"
-                      checked={selectedPriceRange === item.id}
-                      onChange={() => setSelectedPriceRange(item.id)}
-                      className="accent-black w-4 h-4 cursor-pointer"
-                    />
-                    <span>{item.label}</span>
+                {/* Filter Group 2: UK Size Filter */}
+                <div className="pt-5 border-t-2 border-neutral-100">
+                  <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
+                    ขนาดรองเท้า (UK Size)
                   </label>
-                ))}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setSelectedSize('all')}
+                      className={`py-1.5 px-2 text-xs font-mono font-bold rounded-lg border-2 transition-all cursor-pointer ${
+                        selectedSize === 'all'
+                          ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
+                          : 'bg-white hover:bg-neutral-100 text-black border-black'
+                      }`}
+                    >
+                      ทั้งหมด
+                    </button>
+                    {allSizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`py-1.5 px-2 text-xs font-mono font-bold rounded-lg border-2 transition-all cursor-pointer ${
+                          selectedSize === size
+                            ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
+                            : 'bg-white hover:bg-neutral-100 text-black border-black'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Filter Group 3: Price Range */}
+                <div className="pt-5 border-t-2 border-neutral-100">
+                  <label className="text-xs font-black uppercase tracking-wider text-black block mb-3">
+                    ช่วงราคา
+                  </label>
+                  <div className="space-y-2 text-xs font-bold">
+                    {[
+                      { id: 'all', label: 'ทุกช่วงราคา' },
+                      { id: 'under-1800', label: 'ต่ำกว่า ฿1,800' },
+                      { id: '1800-2200', label: '฿1,800 - ฿2,200' },
+                      { id: 'above-2200', label: 'มากกว่า ฿2,200' },
+                    ].map((item) => (
+                      <label 
+                        key={item.id} 
+                        className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-neutral-100 rounded-lg"
+                      >
+                        <input
+                          type="radio"
+                          name="priceRange"
+                          checked={selectedPriceRange === item.id}
+                          onChange={() => setSelectedPriceRange(item.id)}
+                          className="accent-black w-4 h-4 cursor-pointer"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
 
             </aside>
           )}
 
           {/* RIGHT COLUMN: Search Bar & Product Grid matching wireframe */}
           {showProductGrid ? (
-            <main className={`${showSidebar ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-6`}>
+            <main className={`${showSidebar ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-4 sm:space-y-6`}>
             
-            {/* Top Right: Search Box "ค้นหา" (ตรงตามภาพร่างกล่องค้นหาด้านบนขวา) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-neutral-50 border-2 border-black rounded-2xl shadow-[4px_4px_0px_#000000]">
+            {/* Top Right: Search Box "ค้นหา" */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 bg-neutral-50 border-2 border-black rounded-xl sm:rounded-2xl shadow-[3px_3px_0px_#000000] sm:shadow-[4px_4px_0px_#000000]">
               
               {/* Product Count & Filter Summary */}
-              <div className="flex items-center gap-2 text-sm font-bold text-black">
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>พบสินค้าทั้งหมด <strong className="font-black text-base">{filteredProducts.length}</strong> รายการ</span>
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-black">
+                <SlidersHorizontal className="w-4 h-4 flex-shrink-0" />
+                <span>พบสินค้าทั้งหมด <strong className="font-black text-sm sm:text-base">{filteredProducts.length}</strong> รายการ</span>
               </div>
 
               {/* Search Bar matching wireframe [ค้นหา] */}
@@ -351,7 +362,7 @@ export const ProductsPage: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="ค้นหารองเท้า... (เช่น X1, วิ่ง, Classic)"
-                  className="w-full bg-white border-2 border-black rounded-xl pl-10 pr-4 py-2 text-sm text-black placeholder-neutral-500 font-medium focus:outline-none focus:shadow-[2px_2px_0px_#000000] transition-all"
+                  className="w-full bg-white border-2 border-black rounded-xl pl-10 pr-4 py-2 text-xs sm:text-sm text-black placeholder-neutral-500 font-medium focus:outline-none focus:shadow-[2px_2px_0px_#000000] transition-all"
                 />
                 {searchQuery && (
                   <button
@@ -390,9 +401,9 @@ export const ProductsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Product Cards Grid: 2 columns or 3 columns matching wireframe [X] [X] */}
+            {/* Product Cards Grid: 2 columns on mobile, 3 columns on desktop */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.proId}

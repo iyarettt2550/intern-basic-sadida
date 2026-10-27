@@ -20,6 +20,7 @@ interface ProductItem {
   img: string;
   prodetailId: string;
   prodetailSize: string | null;
+  sizes?: string[];
   price: number | null;
   categoryId: string;
   categoryName: string | null;
@@ -28,7 +29,8 @@ interface ProductItem {
 interface ProductDetailOption {
   prodetailId: string;
   prodetailSize: string;
-  price: number;
+  price?: number | null;
+  proId?: string;
 }
 
 const COMMON_UK_SIZES = ['6 UK', '6.5 UK', '7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK', '10 UK', '10.5 UK', '11 UK', '12 UK'];
@@ -40,6 +42,32 @@ const STOCK_IMAGES = [
   '/images/shoe_walker_2.jpg',
   '/images/hero_sketch.jpg',
 ];
+
+// Helper to auto-generate next category ID (e.g. cg_1, cg_2 -> cg_3)
+const getNextCategoryId = (cats: CategoryItem[]): string => {
+  let maxNum = 0;
+  for (const c of cats) {
+    const match = c.categoryId.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  return `cg_${maxNum + 1}`;
+};
+
+// Helper to auto-generate next product ID (e.g. pro_001..pro_006 -> pro_007)
+const getNextProductId = (prods: ProductItem[]): string => {
+  let maxNum = 0;
+  for (const p of prods) {
+    const match = p.proId.match(/\d+/);
+    if (match) {
+      const num = parseInt(match[0], 10);
+      if (!isNaN(num) && num > maxNum) maxNum = num;
+    }
+  }
+  return `pro_${String(maxNum + 1).padStart(3, '0')}`;
+};
 
 export const AdminProducts: React.FC = () => {
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -66,10 +94,9 @@ export const AdminProducts: React.FC = () => {
     prodetailId: '',
     categoryId: 'cg_1',
     img: '/images/shoe_runner_1.jpg',
-    // Custom size/price mode
     useCustomDetail: true,
-    customSize: '8.5 UK',
     customPrice: 2190,
+    selectedSizes: ['7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK'] as string[],
   });
 
   // Category modal states
@@ -157,6 +184,14 @@ export const AdminProducts: React.FC = () => {
   // Edit modal
   const handleEdit = (product: ProductItem) => {
     setSelectedProduct(product);
+    let initialSizes: string[] = [];
+    if (product.sizes && product.sizes.length > 0) {
+      initialSizes = product.sizes.map(formatUKSize);
+    } else if (product.prodetailSize) {
+      initialSizes = [formatUKSize(product.prodetailSize)];
+    } else {
+      initialSizes = ['8.5 UK'];
+    }
     setFormData({
       proId: product.proId,
       proName: product.proName,
@@ -164,40 +199,40 @@ export const AdminProducts: React.FC = () => {
       prodetailId: product.prodetailId,
       categoryId: product.categoryId,
       img: product.img || '/images/shoe_runner_1.jpg',
-      useCustomDetail: false,
-      customSize: product.prodetailSize || '8.5 UK',
+      useCustomDetail: true,
       customPrice: product.price || 1800,
+      selectedSizes: initialSizes,
     });
     setShowEditModal(true);
   };
 
-  // Add modal
+  // Add modal - Auto generate next product ID
   const handleOpenAdd = () => {
-    const nextNum = products.length + 1;
+    const nextProId = getNextProductId(products);
     setFormData({
-      proId: `pro_${String(nextNum).padStart(3, '0')}`,
+      proId: nextProId,
       proName: '',
       description: '',
       prodetailId: productDetails[0]?.prodetailId || '',
       categoryId: categories[0]?.categoryId || 'cg_1',
       img: '/images/shoe_runner_1.jpg',
       useCustomDetail: true,
-      customSize: '8.5 UK',
       customPrice: 2190,
+      selectedSizes: ['7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK'],
     });
     setShowAddModal(true);
   };
 
-  // Category Modal open
+  // Category Modal open - Auto generate next category ID
   const handleOpenCategoryModal = () => {
-    const nextCatNum = categories.length + 1;
-    setNewCategoryId(`cg_${nextCatNum}`);
+    const nextCatId = getNextCategoryId(categories);
+    setNewCategoryId(nextCatId);
     setNewCategoryName('');
     setCategorySuccess('');
     setShowCategoryModal(true);
   };
 
-  // Handle Create Category
+  // Handle Create Category with auto-generated ID
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
@@ -207,19 +242,58 @@ export const AdminProducts: React.FC = () => {
       const created = await createCategory(newCategoryName.trim(), newCategoryId.trim() || undefined);
       setCategories((prev) => {
         const exists = prev.some((c) => c.categoryId === created.categoryId);
-        return exists ? prev.map((c) => (c.categoryId === created.categoryId ? created : c)) : [...prev, created];
+        const updated = exists ? prev.map((c) => (c.categoryId === created.categoryId ? created : c)) : [...prev, created];
+        setNewCategoryId(getNextCategoryId(updated));
+        return updated;
       });
-      setCategorySuccess(`เพิ่มหมวดหมู่ "${created.categoryName}" เรียบร้อยแล้ว!`);
+      setCategorySuccess(`เพิ่มหมวดหมู่ "${created.categoryName}" (รหัส ${created.categoryId}) เรียบร้อยแล้ว!`);
       setNewCategoryName('');
-      const nextNum = categories.length + 2;
-      setNewCategoryId(`cg_${nextNum}`);
-      // Refresh categories list
       fetchCategories();
     } catch (err) {
       console.error('Failed to create category:', err);
     } finally {
       setCategoryCreating(false);
     }
+  };
+
+  // Delete category
+  const handleDeleteCategory = async (catId: string) => {
+    if (!confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่?')) return;
+    try {
+      await fetch(`${API_BASE}/api/admin/products/categories/${catId}`, { method: 'DELETE' });
+      setCategories((prev) => {
+        const updated = prev.filter((c) => c.categoryId !== catId);
+        setNewCategoryId(getNextCategoryId(updated));
+        return updated;
+      });
+      fetchCategories();
+    } catch (err) {
+      console.error('Failed to delete category:', err);
+    }
+  };
+
+  // Multi-size selection toggles
+  const toggleSizeSelection = (size: string) => {
+    setFormData((prev) => {
+      const exists = prev.selectedSizes.includes(size);
+      const updated = exists
+        ? prev.selectedSizes.filter((s) => s !== size)
+        : [...prev.selectedSizes, size];
+      return { ...prev, selectedSizes: updated };
+    });
+  };
+
+  const selectAllSizes = () => {
+    setFormData((prev) => ({ ...prev, selectedSizes: [...COMMON_UK_SIZES] }));
+  };
+
+  const selectPopularSizes = () => {
+    const popular = ['7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK', '10 UK'];
+    setFormData((prev) => ({ ...prev, selectedSizes: popular }));
+  };
+
+  const clearAllSizes = () => {
+    setFormData((prev) => ({ ...prev, selectedSizes: [] }));
   };
 
   // Handle local image file upload
@@ -249,31 +323,16 @@ export const AdminProducts: React.FC = () => {
     }
   };
 
-  // Submit add product
+  // Submit add product (with auto proId & multiple sizes)
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.selectedSizes.length === 0) {
+      alert('กรุณาติ๊กเลือกไซส์รองเท้าอย่างน้อย 1 ไซส์');
+      return;
+    }
     setActionLoading(true);
 
     try {
-      let finalDetailId = formData.prodetailId;
-
-      // If admin entered custom UK size and price, create or resolve product_detail
-      if (formData.useCustomDetail) {
-        const formattedSize = formatUKSize(formData.customSize);
-        const detailRes = await fetch(`${API_BASE}/api/admin/products/product-details`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prodetailSize: formattedSize,
-            price: Number(formData.customPrice) || 1800,
-          }),
-        });
-        const detailData = await detailRes.json();
-        if (detailData.success && detailData.data?.prodetailId) {
-          finalDetailId = detailData.data.prodetailId;
-        }
-      }
-
       const res = await fetch(`${API_BASE}/api/admin/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,11 +340,10 @@ export const AdminProducts: React.FC = () => {
           proId: formData.proId,
           proName: formData.proName,
           description: formData.description,
-          prodetailId: finalDetailId,
           categoryId: formData.categoryId,
           img: formData.img,
           price: Number(formData.customPrice) || 1800,
-          size: formData.useCustomDetail ? formatUKSize(formData.customSize) : undefined,
+          sizes: formData.selectedSizes,
         }),
       });
       const data = await res.json();
@@ -294,7 +352,7 @@ export const AdminProducts: React.FC = () => {
         await fetchProducts();
         await fetchProductDetails();
       } else {
-        alert(`เกิดข้อผิดพลาด: ${data.message || 'ไม่สามารถเพิ่มสินค้าได้'}`);
+        alert(`เกิดข้อผิดพลาด: ${data.message || data.error || 'ไม่สามารถเพิ่มสินค้าได้'}`);
       }
     } catch (err) {
       console.error('Failed to add product:', err);
@@ -304,42 +362,26 @@ export const AdminProducts: React.FC = () => {
     }
   };
 
-  // Submit edit product
+  // Submit edit product (with multiple sizes)
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.selectedSizes.length === 0) {
+      alert('กรุณาติ๊กเลือกไซส์รองเท้าอย่างน้อย 1 ไซส์');
+      return;
+    }
     setActionLoading(true);
 
     try {
-      let finalDetailId = formData.prodetailId;
-
-      // If admin entered custom UK size and price
-      if (formData.useCustomDetail) {
-        const formattedSize = formatUKSize(formData.customSize);
-        const detailRes = await fetch(`${API_BASE}/api/admin/products/product-details`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prodetailSize: formattedSize,
-            price: Number(formData.customPrice) || 1800,
-          }),
-        });
-        const detailData = await detailRes.json();
-        if (detailData.success && detailData.data?.prodetailId) {
-          finalDetailId = detailData.data.prodetailId;
-        }
-      }
-
       const res = await fetch(`${API_BASE}/api/admin/products/${formData.proId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           proName: formData.proName,
           description: formData.description,
-          prodetailId: finalDetailId,
           categoryId: formData.categoryId,
           img: formData.img,
           price: Number(formData.customPrice) || 1800,
-          size: formData.useCustomDetail ? formatUKSize(formData.customSize) : undefined,
+          sizes: formData.selectedSizes,
         }),
       });
       const data = await res.json();
@@ -348,7 +390,7 @@ export const AdminProducts: React.FC = () => {
         await fetchProducts();
         await fetchProductDetails();
       } else {
-        alert(`เกิดข้อผิดพลาด: ${data.message || 'ไม่สามารถแก้ไขสินค้าได้'}`);
+        alert(`เกิดข้อผิดพลาด: ${data.message || data.error || 'ไม่สามารถแก้ไขสินค้าได้'}`);
       }
     } catch (err) {
       console.error('Failed to edit product:', err);
@@ -399,12 +441,6 @@ export const AdminProducts: React.FC = () => {
     value: c.categoryId,
     label: c.categoryName,
     badge: c.categoryId,
-  }));
-
-  const detailFormOptions: DropdownOption[] = productDetails.map((d) => ({
-    value: d.prodetailId,
-    label: `${d.prodetailSize} — ฿${d.price.toLocaleString()}`,
-    badge: d.prodetailId,
   }));
 
   if (loading) {
@@ -516,6 +552,115 @@ export const AdminProducts: React.FC = () => {
     </div>
   );
 
+  // Multi-size selection component for Add/Edit modals
+  const renderSizeAndPriceSection = () => (
+    <div className="p-4 bg-neutral-50 border-2 border-black rounded-xl space-y-4 shadow-[2px_2px_0px_#000000]">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-black uppercase tracking-wider text-black">
+          ขนาดและราคา (UK FORMAT & PRICE)
+        </span>
+        <span className="text-[11px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000000]">
+          เลือกแล้ว {formData.selectedSizes.length} ไซส์
+        </span>
+      </div>
+
+      {/* Price input */}
+      <div>
+        <label className="block text-xs font-bold text-neutral-700 mb-1">
+          ราคาสินค้า (บาท) <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-neutral-500">฿</span>
+          <input
+            type="number"
+            value={formData.customPrice}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, customPrice: Number(e.target.value) }))
+            }
+            placeholder="2190"
+            className="w-full pl-8 pr-3 py-2.5 border-2 border-black rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black bg-white"
+            required
+            min={1}
+          />
+        </div>
+      </div>
+
+      {/* Multi-size selection */}
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <label className="text-xs font-bold text-neutral-700">
+            เลือกไซส์รองเท้า (ติ๊กเลือกได้หลายไซส์) <span className="text-red-500">*</span>
+          </label>
+          <div className="flex items-center gap-1.5 text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={selectAllSizes}
+              className="px-2 py-0.5 bg-white hover:bg-neutral-100 text-black border border-neutral-300 rounded cursor-pointer transition-colors"
+            >
+              เลือกทั้งหมด
+            </button>
+            <button
+              type="button"
+              onClick={selectPopularSizes}
+              className="px-2 py-0.5 bg-white hover:bg-neutral-100 text-black border border-neutral-300 rounded cursor-pointer transition-colors"
+            >
+              ไซส์ยอดนิยม (7-10 UK)
+            </button>
+            <button
+              type="button"
+              onClick={clearAllSizes}
+              className="px-2 py-0.5 bg-white hover:bg-red-50 text-red-600 border border-neutral-300 hover:border-red-300 rounded cursor-pointer transition-colors"
+            >
+              ล้าง
+            </button>
+          </div>
+        </div>
+
+        {/* Size chips */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          {COMMON_UK_SIZES.map((sz) => {
+            const isSelected = formData.selectedSizes.includes(sz);
+            return (
+              <button
+                key={sz}
+                type="button"
+                onClick={() => toggleSizeSelection(sz)}
+                className={`py-2 px-1 text-xs font-mono font-bold rounded-xl border-2 transition-all flex items-center justify-center gap-1 cursor-pointer select-none ${
+                  isSelected
+                    ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000] translate-x-[-1px] translate-y-[-1px]'
+                    : 'bg-white text-neutral-800 border-neutral-300 hover:border-black hover:bg-neutral-100'
+                }`}
+              >
+                {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                <span>{sz}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Validation warning if 0 selected */}
+        {formData.selectedSizes.length === 0 ? (
+          <p className="mt-2 text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border-2 border-red-300 flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>กรุณาติ๊กเลือกอย่างน้อย 1 ไซส์สำหรับรองเท้าคู่นี้</span>
+          </p>
+        ) : (
+          <div className="mt-2 text-[11px] text-neutral-600 bg-white p-2.5 rounded-xl border border-neutral-200 flex flex-wrap items-center gap-1.5">
+            <span className="font-bold text-black">ไซส์ที่เปิดจำหน่าย:</span>
+            {formData.selectedSizes.map((s) => (
+              <span
+                key={s}
+                className="px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-800 font-mono font-bold border border-neutral-300"
+              >
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-6 lg:p-8">
       {/* Page header */}
@@ -622,8 +767,31 @@ export const AdminProducts: React.FC = () => {
                       <div className="text-sm font-bold text-black">{p.proName}</div>
                       <div className="text-xs text-neutral-400 font-mono">{p.proId}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-mono font-bold text-neutral-800">
-                      {p.prodetailSize ? (p.prodetailSize.includes('UK') ? p.prodetailSize : `${p.prodetailSize} UK`) : '-'}
+                    <td className="px-6 py-4">
+                      {p.sizes && p.sizes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-[170px]">
+                          {p.sizes.slice(0, 3).map((sz) => (
+                            <span
+                              key={sz}
+                              className="px-1.5 py-0.5 text-[11px] font-mono font-bold bg-neutral-100 border border-neutral-300 rounded text-neutral-800"
+                            >
+                              {sz}
+                            </span>
+                          ))}
+                          {p.sizes.length > 3 && (
+                            <span
+                              className="px-1.5 py-0.5 text-[11px] font-mono font-bold bg-black text-white rounded"
+                              title={p.sizes.join(', ')}
+                            >
+                              +{p.sizes.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-mono font-bold text-neutral-800">
+                          {p.prodetailSize ? (p.prodetailSize.includes('UK') ? p.prodetailSize : `${p.prodetailSize} UK`) : '-'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm font-black text-black">
                       {p.price ? `฿${p.price.toLocaleString()}` : '-'}
@@ -707,9 +875,21 @@ export const AdminProducts: React.FC = () => {
                         <Tag className="w-4 h-4 text-neutral-600" />
                         <span className="text-sm font-bold text-black">{c.categoryName}</span>
                       </div>
-                      <span className="text-xs font-mono text-neutral-500 bg-white px-2 py-0.5 rounded border border-neutral-300">
-                        {c.categoryId}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-neutral-500 bg-white px-2 py-0.5 rounded border border-neutral-300">
+                          {c.categoryId}
+                        </span>
+                        {c.categoryId !== 'cg_1' && c.categoryId !== 'cg_2' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(c.categoryId)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                            title="ลบหมวดหมู่นี้"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -730,25 +910,33 @@ export const AdminProducts: React.FC = () => {
 
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-1">
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">รหัส ID</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-neutral-600">รหัส ID</label>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300">
+                        สร้างอัตโนมัติ
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={newCategoryId}
-                      onChange={(e) => setNewCategoryId(e.target.value)}
-                      placeholder="cg_3"
-                      className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                      required
+                      readOnly
+                      disabled
+                      className="w-full px-3 py-2 border-2 border-neutral-300 rounded-lg text-sm font-mono font-bold bg-neutral-100 text-neutral-600 cursor-not-allowed select-none"
+                      title="ระบบสร้างรหัสหมวดหมู่อัตโนมัติ"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">ชื่อหมวดหมู่</label>
+                    <label className="block text-xs font-bold text-neutral-600 mb-1">
+                      ชื่อหมวดหมู่ <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="เช่น รองเท้าบาสเก็ตบอล"
+                      placeholder="เช่น รองเท้าบาสเก็ตบอล, รองเท้าแตะ"
                       className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black"
                       required
+                      autoFocus
                     />
                   </div>
                 </div>
@@ -817,14 +1005,27 @@ export const AdminProducts: React.FC = () => {
                   <p className="text-sm font-bold text-black">{selectedProduct.categoryName || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-neutral-500 mb-1">ไซส์ (UK Format)</p>
-                  <p className="text-sm font-bold text-black font-mono">
-                    {selectedProduct.prodetailSize
-                      ? selectedProduct.prodetailSize.includes('UK')
-                        ? selectedProduct.prodetailSize
-                        : `${selectedProduct.prodetailSize} UK`
-                      : '-'}
-                  </p>
+                  <p className="text-xs font-bold text-neutral-500 mb-1">ไซส์ทั้งหมด (UK Format)</p>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedProduct.sizes && selectedProduct.sizes.length > 0 ? (
+                      selectedProduct.sizes.map((s) => (
+                        <span
+                          key={s}
+                          className="px-1.5 py-0.5 bg-neutral-100 border border-black rounded text-xs font-mono font-bold"
+                        >
+                          {s}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm font-bold text-black font-mono">
+                        {selectedProduct.prodetailSize
+                          ? selectedProduct.prodetailSize.includes('UK')
+                            ? selectedProduct.prodetailSize
+                            : `${selectedProduct.prodetailSize} UK`
+                          : '-'}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-neutral-500 mb-1">ราคา</p>
@@ -879,13 +1080,19 @@ export const AdminProducts: React.FC = () => {
               {/* Pro ID & Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-700 mb-1">รหัสสินค้า</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-neutral-700">รหัสสินค้า</label>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-300">
+                      สร้างอัตโนมัติ
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={formData.proId}
-                    onChange={(e) => setFormData((p) => ({ ...p, proId: e.target.value }))}
-                    className="w-full px-3 py-2 border-2 border-black rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                    required
+                    readOnly
+                    disabled
+                    className="w-full px-3 py-2 border-2 border-neutral-300 rounded-xl text-sm font-mono font-bold bg-neutral-100 text-neutral-700 cursor-not-allowed select-none"
+                    title="ระบบสร้างรหัสสินค้าให้อัตโนมัติ"
                   />
                 </div>
                 <div>
@@ -925,96 +1132,8 @@ export const AdminProducts: React.FC = () => {
                 />
               </div>
 
-              {/* UK Size & Price Section */}
-              <div className="p-4 bg-neutral-50 border-2 border-black rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-black">
-                    ขนาดและราคา (UK Format & Price)
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFormData((p) => ({ ...p, useCustomDetail: !p.useCustomDetail }))}
-                      className="text-[11px] font-bold text-black underline cursor-pointer"
-                    >
-                      {formData.useCustomDetail ? 'เลือกจากชุดเดิม' : 'กำหนดขนาดใหม่'}
-                    </button>
-                  </div>
-                </div>
-
-                {formData.useCustomDetail ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-neutral-600 mb-1">
-                          ไซส์รองเท้า (ระบุเป็น UK)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.customSize}
-                          onChange={(e) => setFormData((p) => ({ ...p, customSize: e.target.value }))}
-                          onBlur={(e) =>
-                            setFormData((p) => ({ ...p, customSize: formatUKSize(e.target.value) }))
-                          }
-                          placeholder="8.5 UK"
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-neutral-600 mb-1">
-                          ราคา (บาท)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.customPrice}
-                          onChange={(e) =>
-                            setFormData((p) => ({ ...p, customPrice: Number(e.target.value) }))
-                          }
-                          placeholder="2190"
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {/* Quick UK Size Selector Chips */}
-                    <div>
-                      <span className="text-[10px] font-bold text-neutral-500 block mb-1">
-                        คลิกเลือกขนาด UK ด่วน:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {COMMON_UK_SIZES.map((sz) => (
-                          <button
-                            key={sz}
-                            type="button"
-                            onClick={() => setFormData((p) => ({ ...p, customSize: sz }))}
-                            className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-all cursor-pointer ${
-                              formData.customSize === sz
-                                ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000000]'
-                                : 'bg-white hover:bg-neutral-100 border-neutral-300'
-                            }`}
-                          >
-                            {sz}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">
-                      เลือกจากไซส์และราคาที่มีในระบบ
-                    </label>
-                    <CustomDropdown
-                      value={formData.prodetailId}
-                      onChange={(val) => setFormData((p) => ({ ...p, prodetailId: val }))}
-                      options={detailFormOptions}
-                      placeholder="เลือกขนาด/ราคา"
-                    />
-                  </div>
-                )}
-              </div>
+              {/* UK Multi-Size & Price Section */}
+              {renderSizeAndPriceSection()}
 
               {/* Enhanced Image Selector with Upload */}
               <EnhancedImageSelector />
@@ -1104,86 +1223,8 @@ export const AdminProducts: React.FC = () => {
                 />
               </div>
 
-              {/* Size & Price */}
-              <div className="p-4 bg-neutral-50 border-2 border-black rounded-xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase tracking-wider text-black">
-                    ขนาดและราคา (UK Format & Price)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFormData((p) => ({ ...p, useCustomDetail: !p.useCustomDetail }))}
-                    className="text-[11px] font-bold text-black underline cursor-pointer"
-                  >
-                    {formData.useCustomDetail ? 'เลือกจากชุดเดิม' : 'กำหนดขนาด/ราคาใหม่'}
-                  </button>
-                </div>
-
-                {formData.useCustomDetail ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-neutral-600 mb-1">
-                          ไซส์รองเท้า (UK)
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.customSize}
-                          onChange={(e) => setFormData((p) => ({ ...p, customSize: e.target.value }))}
-                          onBlur={(e) =>
-                            setFormData((p) => ({ ...p, customSize: formatUKSize(e.target.value) }))
-                          }
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-neutral-600 mb-1">
-                          ราคา (บาท)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.customPrice}
-                          onChange={(e) =>
-                            setFormData((p) => ({ ...p, customPrice: Number(e.target.value) }))
-                          }
-                          className="w-full px-3 py-2 border-2 border-black rounded-lg text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-black"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {COMMON_UK_SIZES.map((sz) => (
-                        <button
-                          key={sz}
-                          type="button"
-                          onClick={() => setFormData((p) => ({ ...p, customSize: sz }))}
-                          className={`px-2 py-1 text-xs font-mono font-bold rounded border transition-all cursor-pointer ${
-                            formData.customSize === sz
-                              ? 'bg-black text-white border-black shadow-[1px_1px_0px_#000000]'
-                              : 'bg-white hover:bg-neutral-100 border-neutral-300'
-                          }`}
-                        >
-                          {sz}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-600 mb-1">
-                      เลือกจากไซส์และราคาในระบบ
-                    </label>
-                    <CustomDropdown
-                      value={formData.prodetailId}
-                      onChange={(val) => setFormData((p) => ({ ...p, prodetailId: val }))}
-                      options={detailFormOptions}
-                      placeholder="เลือกขนาด/ราคา"
-                    />
-                  </div>
-                )}
-              </div>
+              {/* UK Multi-Size & Price Section */}
+              {renderSizeAndPriceSection()}
 
               {/* Enhanced Image Selector */}
               <EnhancedImageSelector />

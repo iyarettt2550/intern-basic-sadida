@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, Globe, MessageSquare, LogOut } from 'lucide-react';
+import { removeCookie } from '../../utils/cookies';
 
 interface AdminSidebarProps {
   userName?: string;
@@ -11,6 +12,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ userName, userRole }
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    removeCookie('sadida_admin');
     localStorage.removeItem('sadida_admin');
     navigate('/admin/login');
   };

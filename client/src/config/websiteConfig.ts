@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { getCookie, setCookie, removeCookie } from '../utils/cookies';
 
 export interface GlobalBrandConfig {
   brandName: string;
@@ -156,7 +157,7 @@ export const DEFAULT_PAGES: PageConfig[] = [
  */
 export function getSavedWebsiteFullConfig(): WebsiteFullConfig {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = getCookie(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
     if (!stored) {
       return { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
     }
@@ -304,12 +305,14 @@ export function useWebsiteConfig() {
   );
 
   const saveConfig = useCallback((newConfig: WebsiteFullConfig) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
+    setCookie(STORAGE_KEY, JSON.stringify(newConfig));
+    localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     setConfig(newConfig);
   }, []);
 
   const resetConfig = useCallback(() => {
+    removeCookie(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     setConfig({ brand: DEFAULT_BRAND, pages: DEFAULT_PAGES });

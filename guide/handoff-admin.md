@@ -3,7 +3,7 @@
 **โปรเจกต์:** เว็บไซต์จำหน่ายรองเท้า SADIDA (Sadida Footwear Store)  
 **วันที่ดำเนินการ:** 26 ตุลาคม 2026  
 **ผู้จัดทำ:** ทีมพัฒนาระบบ  
-**เอกสารอ้างอิง:** [`guide/requirement.md`](./requirement.md), [`guide/handoff-today.md`](./handoff-today.md)  
+**เอกสารอ้างอิง:** [`guide/requirement.md`](./requirement.md), [`guide/handoff-today.md`](./handoff-today.md), [`guide/handoff-admin-auto-id-multi-size.md`](./handoff-admin-auto-id-multi-size.md)  
 
 ---
 

@@ -1,11 +1,14 @@
 import type { Product } from '../types';
 
 export const API_BASE = 'http://localhost:3000';
-export const PRODUCTS_CACHE_KEY = 'sadida_products_catalog';
 export const PRODUCTS_UPDATED_EVENT = 'sadida_products_updated';
-
-export const CATEGORIES_CACHE_KEY = 'sadida_categories_catalog';
 export const CATEGORIES_UPDATED_EVENT = 'sadida_categories_updated';
+
+// Auto-clean any legacy localStorage caches
+try {
+  localStorage.removeItem('sadida_products_catalog');
+  localStorage.removeItem('sadida_categories_catalog');
+} catch {}
 
 export interface CategoryItem {
   categoryId: string;
@@ -58,37 +61,25 @@ export function mapBackendProductToProduct(item: any): Product {
 }
 
 /**
- * Returns cached products synchronously directly from localStorage
+ * Always returns empty array synchronously (no caching).
  */
 export function getCachedProducts(): Product[] {
-  try {
-    const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to parse cached products:', err);
-  }
   return [];
 }
 
 /**
- * Saves products to localStorage cache and dispatches update event
+ * Dispatches product update event without persisting to localStorage
  */
 export function saveProductsToCache(products: Product[]): void {
   try {
-    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(products));
-    window.dispatchEvent(new CustomEvent(PRODUCTS_UPDATED_EVENT, { detail: products }));
-  } catch (err) {
-    console.warn('Failed to save products to cache:', err);
-  }
+    localStorage.removeItem('sadida_products_catalog');
+  } catch {}
+  window.dispatchEvent(new CustomEvent(PRODUCTS_UPDATED_EVENT, { detail: products }));
 }
 
 /**
- * Asynchronously loads products from backend API, updating cache on success.
+ * Asynchronously loads products from backend API.
+ * If backend server is not running (offline/unreachable), returns empty array [].
  */
 export async function loadAllProducts(): Promise<Product[]> {
   try {
@@ -97,69 +88,53 @@ export async function loadAllProducts(): Promise<Product[]> {
     });
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) {
-      const mapped = json.data.map(mapBackendProductToProduct);
-      saveProductsToCache(mapped);
-      return mapped;
+      return json.data.map(mapBackendProductToProduct);
     }
   } catch (err) {
-    console.warn('Backend unreachable, using local products cache:', err);
-  }
-  return getCachedProducts();
-}
-
-/**
- * Get cached categories directly from localStorage
- */
-export function getCachedCategories(): CategoryItem[] {
-  try {
-    const raw = localStorage.getItem(CATEGORIES_CACHE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to parse cached categories:', err);
+    console.info('Backend server is not running, returning empty products list');
   }
   return [];
 }
 
 /**
- * Save categories to cache and dispatch event
+ * Always returns empty array synchronously (no caching).
  */
-export function saveCategoriesToCache(cats: CategoryItem[]): void {
-  try {
-    localStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(cats));
-    window.dispatchEvent(new CustomEvent(CATEGORIES_UPDATED_EVENT, { detail: cats }));
-  } catch (err) {
-    console.warn('Failed to save categories to cache:', err);
-  }
+export function getCachedCategories(): CategoryItem[] {
+  return [];
 }
 
 /**
- * Load categories from backend API or local cache
+ * Dispatches category update event without persisting to localStorage
+ */
+export function saveCategoriesToCache(cats: CategoryItem[]): void {
+  try {
+    localStorage.removeItem('sadida_categories_catalog');
+  } catch {}
+  window.dispatchEvent(new CustomEvent(CATEGORIES_UPDATED_EVENT, { detail: cats }));
+}
+
+/**
+ * Load categories directly from backend API.
+ * If backend server is not running, returns empty array [].
  */
 export async function loadAllCategories(): Promise<CategoryItem[]> {
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/categories`);
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) {
-      saveCategoriesToCache(json.data);
       return json.data;
     }
   } catch (err) {
-    console.warn('Backend categories unreachable, using cache:', err);
+    console.info('Backend server is not running, returning empty categories list');
   }
-  return getCachedCategories();
+  return [];
 }
 
 /**
- * Create a new category and persist to server + cache
+ * Create a new category on server
  */
 export async function createCategory(categoryName: string, customId?: string): Promise<CategoryItem> {
-  const current = getCachedCategories();
-  const newId = customId || `cg_${current.length + 1}`;
+  const newId = customId || `cg_${Date.now()}`;
   const newCat: CategoryItem = { categoryId: newId, categoryName: categoryName.trim() };
 
   try {
@@ -170,17 +145,12 @@ export async function createCategory(categoryName: string, customId?: string): P
     });
     const json = await res.json();
     if (json.success && json.data) {
-      const updated = [...current.filter(c => c.categoryId !== json.data.categoryId), json.data];
-      saveCategoriesToCache(updated);
       return json.data;
     }
   } catch (err) {
-    console.info('Backend category creation offline fallback:', err);
+    console.warn('Backend category creation failed:', err);
   }
 
-  // Fallback cache save
-  const updated = [...current.filter(c => c.categoryId !== newId), newCat];
-  saveCategoriesToCache(updated);
   return newCat;
 }
 
@@ -199,7 +169,7 @@ export async function uploadProductImage(dataUrl: string): Promise<string> {
       return json.data.url;
     }
   } catch (err) {
-    console.info('Backend image upload offline fallback:', err);
+    console.warn('Backend image upload failed:', err);
   }
   return dataUrl;
 }

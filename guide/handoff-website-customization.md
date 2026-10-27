@@ -4,7 +4,7 @@
 **วันที่ดำเนินการล่าสุด:** 27 ตุลาคม 2026  
 **ผู้จัดทำ:** ทีมพัฒนาระบบ  
 **สถานะการทำงาน:** สำเร็จสมบูรณ์ 100% (Build & Type Check ผ่าน 0 Error)  
-**เอกสารอ้างอิง:** [`guide/requirement.md`](file:///d:/intern-basic-sadida/guide/requirement.md), [`guide/handoff-admin.md`](file:///d:/intern-basic-sadida/guide/handoff-admin.md)
+**เอกสารอ้างอิง:** [`guide/requirement.md`](file:///d:/intern-basic-sadida/guide/requirement.md), [`guide/handoff-admin.md`](file:///d:/intern-basic-sadida/guide/handoff-admin.md), [`guide/handoff-admin-auto-id-multi-size.md`](file:///d:/intern-basic-sadida/guide/handoff-admin-auto-id-multi-size.md)
 
 ---
 

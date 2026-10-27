@@ -32,6 +32,7 @@ import {
   type PageConfig,
   type GlobalBrandConfig,
 } from '../../config/websiteConfig';
+import { setCookie, removeCookie } from '../../utils/cookies';
 import {
   getCachedProducts,
   loadAllProducts,
@@ -75,7 +76,7 @@ const LOCATION_PRESETS = [
 export const AdminWebsite: React.FC = () => {
   const [brand, setBrand] = useState<GlobalBrandConfig>(DEFAULT_BRAND);
   const [pages, setPages] = useState<PageConfig[]>(DEFAULT_PAGES);
-  const [allProducts, setAllProducts] = useState<Product[]>(getCachedProducts());
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'brand' | 'home' | 'products' | 'contact'>('brand');
   const [editingText, setEditingText] = useState<{ sectionId: string; key: string } | null>(null);
   const [editingImage, setEditingImage] = useState<string | null>(null);
@@ -111,7 +112,8 @@ export const AdminWebsite: React.FC = () => {
   // Save full configuration
   const handleSave = () => {
     const fullConfig = { brand, pages };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(fullConfig));
+    setCookie(STORAGE_KEY, JSON.stringify(fullConfig));
+    localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -122,6 +124,7 @@ export const AdminWebsite: React.FC = () => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตการตั้งค่าหน้าเว็บทั้งหมดกลับเป็นค่าเริ่มต้น?')) {
       setBrand(DEFAULT_BRAND);
       setPages(DEFAULT_PAGES);
+      removeCookie(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY);
       window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     }

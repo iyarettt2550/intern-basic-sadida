@@ -1,9 +1,10 @@
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
+import { getCookie, removeCookie } from '../../utils/cookies';
 
 export const AdminLayout: React.FC = () => {
-  const stored = localStorage.getItem('sadida_admin');
+  const stored = getCookie('sadida_admin') || localStorage.getItem('sadida_admin');
 
   if (!stored) {
     return <Navigate to="/admin/login" replace />;
@@ -13,6 +14,7 @@ export const AdminLayout: React.FC = () => {
   try {
     user = JSON.parse(stored);
   } catch {
+    removeCookie('sadida_admin');
     localStorage.removeItem('sadida_admin');
     return <Navigate to="/admin/login" replace />;
   }

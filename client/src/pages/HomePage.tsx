@@ -11,7 +11,7 @@ import { getCachedProducts, loadAllProducts, PRODUCTS_UPDATED_EVENT } from '../u
 import { useWebsiteConfig, DEFAULT_PAGES, type SectionItem } from '../config/websiteConfig';
 
 export const HomePage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(getCachedProducts());
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { getPage } = useWebsiteConfig();
   const homePage = getPage('home');
