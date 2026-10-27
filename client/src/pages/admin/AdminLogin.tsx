@@ -6,7 +6,7 @@ const API_BASE = 'http://localhost:3000';
 
 export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
-  const [phone, setPhone] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ export const AdminLogin: React.FC = () => {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password }),
+        body: JSON.stringify({ userName, password }),
       });
       const data = await res.json();
 
@@ -73,19 +73,20 @@ export const AdminLogin: React.FC = () => {
               </div>
             )}
 
-            {/* Phone field */}
+            {/* Username field */}
             <div>
-              <label className="block text-sm font-bold text-black mb-2 tracking-wide">
-                เบอร์โทรศัพท์
+              <label htmlFor="admin-username" className="block text-sm font-bold text-black mb-2 tracking-wide">
+                ชื่อผู้ใช้
               </label>
               <input
-                id="admin-phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0812345678"
+                id="admin-username"
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="กรอกชื่อผู้ใช้ เช่น Admin Sadida"
                 className="w-full px-4 py-3 border-2 border-black rounded-xl bg-white text-black font-medium placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all"
                 required
+                autoComplete="username"
               />
             </div>
 

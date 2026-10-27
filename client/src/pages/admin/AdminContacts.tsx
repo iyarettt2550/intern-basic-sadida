@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Search, Eye, Trash2, X, Calendar, Mail, Phone, User, FileText } from 'lucide-react';
+import { Search, Eye, Trash2, X, Mail, Phone, User, FileText } from 'lucide-react';
 
 const API_BASE = 'http://localhost:3000';
 

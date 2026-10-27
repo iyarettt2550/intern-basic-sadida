@@ -39,36 +39,10 @@ async function seed() {
     console.log("  ✅ Categories: รองเท้าวิ่ง (cg_1), รองเท้าเดิน (cg_2)\n");
 
     // ──────────────────────────────────────────────
-    // 3. Product Details (ขนาดและราคา)
-    // ──────────────────────────────────────────────
-    console.log("📌 3/6 — เพิ่ม Product Details (ไซส์ UK + ราคา)...");
-    await db
-      .insert(productDetail)
-      .values([
-        { prodetailId: "pdd_1",  prodetailSize: "6 UK",    price: 1000.00 },
-        { prodetailId: "pdd_2",  prodetailSize: "6.5 UK",  price: 1100.00 },
-        { prodetailId: "pdd_3",  prodetailSize: "7 UK",    price: 1200.00 },
-        { prodetailId: "pdd_4",  prodetailSize: "7.5 UK",  price: 1300.00 },
-        { prodetailId: "pdd_5",  prodetailSize: "8 UK",    price: 1400.00 },
-        { prodetailId: "pdd_6",  prodetailSize: "8.5 UK",  price: 1500.00 },
-        { prodetailId: "pdd_7",  prodetailSize: "9 UK",    price: 1600.00 },
-        { prodetailId: "pdd_8",  prodetailSize: "9.5 UK",  price: 1700.00 },
-        { prodetailId: "pdd_9",  prodetailSize: "10 UK",   price: 1800.00 },
-        { prodetailId: "pdd_10", prodetailSize: "10.5 UK", price: 1900.00 },
-        { prodetailId: "pdd_11", prodetailSize: "11 UK",   price: 2000.00 },
-        { prodetailId: "pdd_12", prodetailSize: "11.5 UK", price: 2100.00 },
-        { prodetailId: "pdd_13", prodetailSize: "12 UK",   price: 2200.00 },
-        { prodetailId: "pdd_14", prodetailSize: "12.5 UK", price: 2300.00 },
-        { prodetailId: "pdd_16", prodetailSize: "13 UK",   price: 2400.00 },
-      ])
-      .onConflictDoNothing();
-    console.log("  ✅ Product Details: 15 ไซส์ (6 UK – 13 UK)\n");
-
-    // ──────────────────────────────────────────────
-    // 4. Products (สินค้ารองเท้า 6 รายการ)
+    // 3. Products (สินค้ารองเท้า 6 รายการ)
     //    เก็บรูปเป็น path ไฟล์ใน client/public/images/
     // ──────────────────────────────────────────────
-    console.log("📌 4/6 — เพิ่ม Products (6 รายการ พร้อม path รูปภาพ)...");
+    console.log("📌 3/6 — เพิ่ม Products (6 รายการ พร้อม path รูปภาพ)...");
     await db
       .insert(product)
       .values([
@@ -77,7 +51,7 @@ async function seed() {
           proName: "Sadida Zoom Runner X1",
           description: "รองเท้าวิ่งสายสปีด น้ำหนักเบาพิเศษ พื้นโฟมซับแรงกระแทก เด้งทุกก้าว",
           img: "/images/shoe_runner_1.jpg",
-          prodetailId: "pdd_6",   // 8.5 UK — ฿1,500
+          price: 1990.00,         // ฿1,990
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -85,7 +59,7 @@ async function seed() {
           proName: "Sadida Pure Walk Classic",
           description: "รองเท้าเดินหนังพรีเมียมสีขาวบริสุทธิ์ นุ่มสบาย ซัพพอร์ตสรีระเท้าตลอดวัน",
           img: "/images/shoe_walker_1.jpg",
-          prodetailId: "pdd_5",   // 8 UK — ฿1,400
+          price: 1790.00,         // ฿1,790
           categoryId: "cg_2",     // รองเท้าเดิน
         },
         {
@@ -93,7 +67,7 @@ async function seed() {
           proName: "Sadida Swift Aeroflow",
           description: "นวัตกรรมผ้าถักระบายอากาศขั้นสูง ดีไซน์สปอร์ตมินิมอลสำหรับนักวิ่งทางไกล",
           img: "/images/shoe_runner_2.jpg",
-          prodetailId: "pdd_7",   // 9 UK — ฿1,600
+          price: 2190.00,         // ฿2,190
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -101,7 +75,7 @@ async function seed() {
           proName: "Sadida Urban Pace Leather",
           description: "รองเท้าเดินสไตล์สตรีทมินิมอล หนังแท้สีดำสนิทแมตช์ขอบขาวสุดไอคอนิก",
           img: "/images/shoe_walker_2.jpg",
-          prodetailId: "pdd_6",   // 8.5 UK — ฿1,500
+          price: 2490.00,         // ฿2,490
           categoryId: "cg_2",     // รองเท้าเดิน
         },
         {
@@ -109,7 +83,7 @@ async function seed() {
           proName: "Sadida Monochrome Studio Edit",
           description: "รุ่นลิมิเต็ดจากการออกแบบในสตูดิโอ ผสานความยืดหยุ่นและการรองรับแรงกระแทก",
           img: "/images/shoe_runner_1.jpg",
-          prodetailId: "pdd_8",   // 9.5 UK — ฿1,700
+          price: 2890.00,         // ฿2,890
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -117,12 +91,67 @@ async function seed() {
           proName: "Sadida All-Day Commuter",
           description: "ความเรียบหรูที่ลงตัวสำหรับวันทำงานและการเดินท่องเที่ยวในเมือง",
           img: "/images/shoe_walker_1.jpg",
-          prodetailId: "pdd_5",   // 8 UK — ฿1,400
+          price: 1290.00,         // ฿1,290
           categoryId: "cg_2",     // รองเท้าเดิน
         },
       ])
       .onConflictDoNothing();
     console.log("  ✅ Products: 6 รายการ (3 วิ่ง + 3 เดิน)\n");
+
+    // ──────────────────────────────────────────────
+    // 4. Product Details (ขนาดรองเท้า เชื่อมโยงกับแต่ละสินค้า)
+    // ──────────────────────────────────────────────
+    console.log("📌 4/6 — เพิ่ม Product Details (ไซส์ตามสินค้า แต่ละรุ่นมี 4-7 ไซส์)...");
+    await db
+      .insert(productDetail)
+      .values([
+        // pro_001: Sadida Zoom Runner X1 (6 ไซส์)
+        { prodetailId: "pdd_001", proId: "pro_001", prodetailSize: "7 UK" },
+        { prodetailId: "pdd_002", proId: "pro_001", prodetailSize: "7.5 UK" },
+        { prodetailId: "pdd_003", proId: "pro_001", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_004", proId: "pro_001", prodetailSize: "8.5 UK" },
+        { prodetailId: "pdd_005", proId: "pro_001", prodetailSize: "9 UK" },
+        { prodetailId: "pdd_006", proId: "pro_001", prodetailSize: "10 UK" },
+
+        // pro_002: Sadida Pure Walk Classic (5 ไซส์)
+        { prodetailId: "pdd_007", proId: "pro_002", prodetailSize: "6.5 UK" },
+        { prodetailId: "pdd_008", proId: "pro_002", prodetailSize: "7 UK" },
+        { prodetailId: "pdd_009", proId: "pro_002", prodetailSize: "7.5 UK" },
+        { prodetailId: "pdd_010", proId: "pro_002", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_011", proId: "pro_002", prodetailSize: "9 UK" },
+
+        // pro_003: Sadida Swift Aeroflow (7 ไซส์)
+        { prodetailId: "pdd_012", proId: "pro_003", prodetailSize: "7.5 UK" },
+        { prodetailId: "pdd_013", proId: "pro_003", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_014", proId: "pro_003", prodetailSize: "8.5 UK" },
+        { prodetailId: "pdd_015", proId: "pro_003", prodetailSize: "9 UK" },
+        { prodetailId: "pdd_016", proId: "pro_003", prodetailSize: "9.5 UK" },
+        { prodetailId: "pdd_017", proId: "pro_003", prodetailSize: "10 UK" },
+        { prodetailId: "pdd_018", proId: "pro_003", prodetailSize: "10.5 UK" },
+
+        // pro_004: Sadida Urban Pace Leather (4 ไซส์)
+        { prodetailId: "pdd_019", proId: "pro_004", prodetailSize: "7.5 UK" },
+        { prodetailId: "pdd_020", proId: "pro_004", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_021", proId: "pro_004", prodetailSize: "8.5 UK" },
+        { prodetailId: "pdd_022", proId: "pro_004", prodetailSize: "9 UK" },
+
+        // pro_005: Sadida Monochrome Studio Edit (5 ไซส์)
+        { prodetailId: "pdd_023", proId: "pro_005", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_024", proId: "pro_005", prodetailSize: "8.5 UK" },
+        { prodetailId: "pdd_025", proId: "pro_005", prodetailSize: "9 UK" },
+        { prodetailId: "pdd_026", proId: "pro_005", prodetailSize: "9.5 UK" },
+        { prodetailId: "pdd_027", proId: "pro_005", prodetailSize: "10 UK" },
+
+        // pro_006: Sadida All-Day Commuter (6 ไซส์)
+        { prodetailId: "pdd_028", proId: "pro_006", prodetailSize: "6.5 UK" },
+        { prodetailId: "pdd_029", proId: "pro_006", prodetailSize: "7 UK" },
+        { prodetailId: "pdd_030", proId: "pro_006", prodetailSize: "7.5 UK" },
+        { prodetailId: "pdd_031", proId: "pro_006", prodetailSize: "8 UK" },
+        { prodetailId: "pdd_032", proId: "pro_006", prodetailSize: "8.5 UK" },
+        { prodetailId: "pdd_033", proId: "pro_006", prodetailSize: "9 UK" },
+      ])
+      .onConflictDoNothing();
+    console.log("  ✅ Product Details: 33 รายการ (ไซส์ 6.5 UK – 10.5 UK เชื่อมโยงกับแต่ละสินค้า)\n");
 
     // ──────────────────────────────────────────────
     // 5. Users (ผู้ใช้เริ่มต้น — แอดมิน 1 คน)
@@ -184,8 +213,8 @@ async function seed() {
     console.log("📊 สรุป:");
     console.log("   • User Roles    : 2 รายการ (Admin, Customer)");
     console.log("   • Categories    : 2 รายการ (วิ่ง, เดิน)");
-    console.log("   • Product Detail: 15 ไซส์ (6 UK – 13 UK)");
     console.log("   • Products      : 6 รายการ (เก็บ path รูปภาพ)");
+    console.log("   • Product Detail: 33 รายการ (ไซส์ตามรุ่น 4-7 ไซส์/สินค้า)");
     console.log("   • Users         : 1 คน (Admin)");
     console.log("   • Contacts      : 3 ข้อความตัวอย่าง");
     console.log("═══════════════════════════════════════════\n");

@@ -60,7 +60,6 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div>
               {/* Product ID & Badge */}
               <div className="flex items-center justify-between text-xs text-neutral-600 mb-2">
-                <span className="font-mono font-bold">รหัสสินค้า: {product.proId}</span>
                 {product.badge && (
                   <span className="px-2 py-0.5 rounded bg-neutral-100 text-black border border-black text-[10px] font-bold">
                     {product.badge}

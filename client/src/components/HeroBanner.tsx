@@ -5,10 +5,18 @@ import { Link } from 'react-router-dom';
 interface HeroBannerProps {
   onExploreProducts?: () => void;
   onExploreBrand?: () => void;
+  badge?: string;
+  headline?: string;
+  subtitle?: string;
+  image?: string;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   onExploreBrand,
+  badge,
+  headline,
+  subtitle,
+  image,
 }) => {
   const [activeBanner, setActiveBanner] = useState<'sketch' | 'panoramic'>('sketch');
 
@@ -50,21 +58,24 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               {/* Badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100 border-2 border-black text-xs font-bold tracking-wider text-black uppercase mb-6 shadow-[2px_2px_0px_#000000]">
                 <Zap className="w-3.5 h-3.5 text-black fill-black" />
-                <span>Sadida Concept Atelier</span>
+                <span>{badge || 'Sadida Concept Atelier'}</span>
               </div>
 
               {/* Main Headline */}
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-black uppercase font-['Space_Grotesk'] leading-[1.1]">
-                CRAFTED FOR <br />
-                <span className="text-black underline decoration-4 decoration-black">
-                  PURE MOTION.
-                </span>
+                {headline || (
+                  <>
+                    CRAFTED FOR <br />
+                    <span className="text-black underline decoration-4 decoration-black">
+                      PURE MOTION.
+                    </span>
+                  </>
+                )}
               </h1>
 
               {/* Subtitle in Thai */}
               <p className="mt-5 text-sm sm:text-base text-neutral-700 font-normal leading-relaxed max-w-md">
-                จากภาพร่างสเก็ตช์ในสตูดิโอ สู่นวัตกรรมรองเท้าวิ่งและรองเท้าเดินที่เรียบหรูเหนือกาลเวลา 
-                ผสานความเบาสบาย การยึดเกาะ และเอกลักษณ์โทนสีดำกับสีขาว
+                {subtitle || 'จากภาพร่างสเก็ตช์ในสตูดิโอ สู่นวัตกรรมรองเท้าวิ่งและรองเท้าเดินที่เรียบหรูเหนือกาลเวลา ผสานความเบาสบาย การยึดเกาะ และเอกลักษณ์โทนสีดำกับสีขาว'}
               </p>
             </div>
 
@@ -120,7 +131,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             {activeBanner === 'sketch' ? (
               <div className="relative w-full h-full group">
                 <img
-                  src="/images/hero_sketch.jpg"
+                  src={image || '/images/hero_sketch.jpg'}
                   alt="Sadida Sneaker Designer Studio Sketching"
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                 />

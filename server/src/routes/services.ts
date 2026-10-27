@@ -8,20 +8,32 @@ const router = new Hono();
 // GET /api/services (or /api/products)
 router.get("/", async (c) => {
   try {
-    const items = await db
+    const products = await db
       .select({
         proId: product.proId,
         proName: product.proName,
         description: product.description,
-        prodetailId: product.prodetailId,
-        prodetailSize: productDetail.prodetailSize,
-        price: productDetail.price,
+        img: product.img,
+        price: product.price,
         categoryId: product.categoryId,
         categoryName: categories.categoryName,
       })
       .from(product)
-      .leftJoin(productDetail, eq(product.prodetailId, productDetail.prodetailId))
       .leftJoin(categories, eq(product.categoryId, categories.categoryId));
+
+    const allDetails = await db.select().from(productDetail);
+
+    const items = products.map((p) => {
+      const details = allDetails.filter((d) => d.proId === p.proId);
+      const sizes = details.map((d) => d.prodetailSize);
+      return {
+        ...p,
+        prodetailId: details[0]?.prodetailId || "",
+        prodetailSize: sizes[0] || "",
+        sizes: sizes,
+        details: details,
+      };
+    });
 
     return c.json({
       success: true,

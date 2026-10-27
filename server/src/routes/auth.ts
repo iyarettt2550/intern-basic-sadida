@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { loginSchema } from "../validators";
 import { db } from "../db";
 import { users, userRoles } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or, ilike } from "drizzle-orm";
 
 const router = new Hono();
 
@@ -26,9 +26,18 @@ router.post("/login", async (c) => {
       );
     }
 
-    const { phone, password } = parsed.data;
+    const { password } = parsed.data;
+    const username = parsed.data.username || parsed.data.userName;
+    const phone = parsed.data.phone;
 
-    // Find user by phone
+    // Find user by username or phone
+    const condition =
+      username && phone
+        ? or(eq(users.usersName, username), eq(users.phone, phone))
+        : username
+        ? or(eq(users.usersName, username), ilike(users.usersName, username))
+        : eq(users.phone, phone!);
+
     const user = await db
       .select({
         usersId: users.usersId,
@@ -40,12 +49,12 @@ router.post("/login", async (c) => {
       })
       .from(users)
       .leftJoin(userRoles, eq(users.userRolesId, userRoles.userRolesId))
-      .where(eq(users.phone, phone))
+      .where(condition)
       .limit(1);
 
     if (user.length === 0) {
       return c.json(
-        { success: false, error: "เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้อง" },
+        { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
         401
       );
     }
@@ -55,7 +64,7 @@ router.post("/login", async (c) => {
     // Compare password (plaintext for now — schema limits varchar(50))
     if (foundUser.passwordHash !== password) {
       return c.json(
-        { success: false, error: "เบอร์โทรศัพท์หรือรหัสผ่านไม่ถูกต้อง" },
+        { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
         401
       );
     }

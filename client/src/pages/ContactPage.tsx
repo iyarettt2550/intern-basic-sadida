@@ -2,8 +2,39 @@ import React, { useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Mail, Phone, MapPin, Send, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { useWebsiteConfig } from '../config/websiteConfig';
 
 export const ContactPage: React.FC = () => {
+  const { isSectionVisible, getSectionText } = useWebsiteConfig();
+  const showForm = isSectionVisible('contact', 'contactForm');
+  const showInfo = isSectionVisible('contact', 'contactInfo');
+
+  const formTitle = getSectionText('contact', 'contactForm', 'title', 'ติดต่อเรา');
+  const formDesc = getSectionText('contact', 'contactForm', 'description', 'ส่งข้อความถึงทีมงาน Sadida');
+  const formBtn = getSectionText('contact', 'contactForm', 'buttonText', 'ส่ง');
+
+  const infoTitle = getSectionText('contact', 'contactInfo', 'title', 'รายละเอียดที่อยู่');
+  const infoAddress = getSectionText(
+    'contact',
+    'contactInfo',
+    'address',
+    'Sadida Flagship Atelier & Store\n99/4 อาคารนวัตกรรมดีไซน์ ชั้น 1\nแขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110'
+  );
+  const infoPhone = getSectionText('contact', 'contactInfo', 'phone', '081-234-5678');
+  const infoEmail = getSectionText('contact', 'contactInfo', 'email', 'contact@sadida.co.th');
+  const mapTitle = getSectionText('contact', 'contactInfo', 'mapTitle', 'map (แผนที่ตั้ง)');
+  const mapLat = getSectionText('contact', 'contactInfo', 'mapLat', '13.7380');
+  const mapLng = getSectionText('contact', 'contactInfo', 'mapLng', '100.5630');
+  const mapZoom = getSectionText('contact', 'contactInfo', 'mapZoom', '15');
+  const googleMapsApiKey = getSectionText('contact', 'contactInfo', 'googleMapsApiKey', '');
+
+  const mapEmbedUrl = googleMapsApiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(googleMapsApiKey)}&q=${encodeURIComponent(mapLat)},${encodeURIComponent(mapLng)}&zoom=${encodeURIComponent(mapZoom)}`
+    : `https://maps.google.com/maps?q=${encodeURIComponent(mapLat)},${encodeURIComponent(mapLng)}&hl=th&z=${encodeURIComponent(mapZoom)}&output=embed`;
+
+  const mapExternalUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapLat)},${encodeURIComponent(mapLng)}`;
+
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -111,17 +142,20 @@ export const ContactPage: React.FC = () => {
           </div>
         )}
 
-        {/* 2-Column Grid exactly matching Wireframe "หน้าติดต่อหาแอดมิน":
-            Left: ติดต่อเรา (Form) | Right: รายละเอียดที่อยู่ + map */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* 2-Column Grid or Single Column matching Visibility */}
+        <div className={`grid grid-cols-1 ${showForm && showInfo ? 'lg:grid-cols-2' : 'max-w-2xl mx-auto'} gap-8 items-start`}>
           
           {/* LEFT COLUMN: Contact Form "ติดต่อเรา" */}
-          <div className="bg-white border-2 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000] space-y-6">
-            <div className="text-center pb-2">
-              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight font-['Space_Grotesk']">
-                ติดต่อเรา
-              </h1>
-            </div>
+          {showForm && (
+            <div className="bg-white border-2 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000] space-y-6">
+              <div className="text-center pb-2">
+                <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight font-['Space_Grotesk']">
+                  {formTitle}
+                </h1>
+                {formDesc && (
+                  <p className="text-xs text-neutral-500 mt-1">{formDesc}</p>
+                )}
+              </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Field 1: name */}
@@ -228,7 +262,7 @@ export const ContactPage: React.FC = () => {
                     <span>กำลังส่ง...</span>
                   ) : (
                     <>
-                      <span>ส่ง</span>
+                      <span>{formBtn}</span>
                       <Send className="w-4 h-4" />
                     </>
                   )}
@@ -236,26 +270,26 @@ export const ContactPage: React.FC = () => {
               </div>
             </form>
           </div>
+          )}
 
           {/* RIGHT COLUMN: รายละเอียดที่อยู่ (Top) + map (Bottom) matching wireframe */}
-          <div className="space-y-6">
-            
-            {/* Box: รายละเอียดที่อยู่ (ตรงตามภาพร่าง) */}
-            <div className="bg-white border-2 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000] space-y-5">
-              <div className="flex items-center gap-2.5 pb-3 border-b-2 border-black">
-                <MapPin className="w-5 h-5 text-black" />
-                <h2 className="text-xl font-black uppercase font-['Space_Grotesk'] tracking-tight">
-                  รายละเอียดที่อยู่
-                </h2>
-              </div>
+          {showInfo && (
+            <div className="space-y-6">
+              
+              {/* Box: รายละเอียดที่อยู่ (ตรงตามภาพร่าง) */}
+              <div className="bg-white border-2 border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0px_#000000] space-y-5">
+                <div className="flex items-center gap-2.5 pb-3 border-b-2 border-black">
+                  <MapPin className="w-5 h-5 text-black" />
+                  <h2 className="text-xl font-black uppercase font-['Space_Grotesk'] tracking-tight">
+                    {infoTitle}
+                  </h2>
+                </div>
 
               <div className="space-y-4 text-sm">
                 <div>
                   <span className="text-xs font-black uppercase text-neutral-500 block mb-1">ที่ตั้งร้านค้า & สตูดิโอ</span>
-                  <p className="font-bold text-black leading-relaxed">
-                    Sadida Flagship Atelier & Store<br />
-                    99/4 อาคารนวัตกรรมดีไซน์ ชั้น 1<br />
-                    แขวงคลองเตยเหนือ เขตวัฒนา กรุงเทพฯ 10110
+                  <p className="font-bold text-black leading-relaxed whitespace-pre-line">
+                    {infoAddress}
                   </p>
                 </div>
 
@@ -270,27 +304,27 @@ export const ContactPage: React.FC = () => {
                 <div className="pt-2 border-t border-neutral-200 flex flex-wrap items-center gap-x-6 gap-y-2">
                   <p className="font-bold text-black flex items-center gap-1.5">
                     <Phone className="w-4 h-4" />
-                    <span className="font-mono">02-999-8888, 089-123-4567</span>
+                    <span className="font-mono">{infoPhone}</span>
                   </p>
                   <p className="font-bold text-black flex items-center gap-1.5">
                     <Mail className="w-4 h-4" />
-                    <span className="font-mono">support@sadida.store</span>
+                    <span className="font-mono">{infoEmail}</span>
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Box: map (ตรงตามภาพร่าง [map] ด้วย Google Maps Embed) */}
+            {/* Box: map (ตรงตามภาพร่าง [map] ด้วย Google Maps Embed ปรับแต่งได้) */}
             <div className="bg-white border-2 border-black rounded-3xl overflow-hidden shadow-[8px_8px_0px_#000000]">
               <div className="px-6 py-3 border-b-2 border-black flex items-center justify-between bg-neutral-50">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-black" />
                   <span className="text-sm font-black uppercase font-['Space_Grotesk']">
-                    map (แผนที่ตั้ง)
+                    {mapTitle}
                   </span>
                 </div>
                 <a
-                  href="https://maps.google.com"
+                  href={mapExternalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs font-bold text-black underline hover:text-neutral-600"
@@ -308,13 +342,14 @@ export const ContactPage: React.FC = () => {
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15502.830635102555!2d100.5630!3d13.7380!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e29ee0e6377759%3A0xa60b377b212f455!2sAsok%2C%20Khwaeng%20Khlong%20Toei%20Nuea%2C%20Khet%20Watthana%2C%20Krung%20Thep%20Maha%20Nakhon%2010110!5e0!3m2!1sen!2sth!4v1700000000000!5m2!1sen!2sth"
+                  src={mapEmbedUrl}
                   className="w-full h-full"
                 />
               </div>
             </div>
 
-          </div>
+            </div>
+          )}
 
         </div>
 

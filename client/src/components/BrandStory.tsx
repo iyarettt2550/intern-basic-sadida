@@ -1,7 +1,12 @@
 import React from 'react';
 import { ShieldCheck, Wind, Feather, Footprints, Award, RefreshCw } from 'lucide-react';
 
-export const BrandStory: React.FC = () => {
+interface BrandStoryProps {
+  title?: string;
+  description?: string;
+}
+
+export const BrandStory: React.FC<BrandStoryProps> = ({ title, description }) => {
   return (
     <section id="brand" className="py-16 sm:py-20 border-t-2 border-black bg-neutral-50 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,11 +18,10 @@ export const BrandStory: React.FC = () => {
             <span>SADIDA PHILOSOPHY</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-black uppercase font-['Space_Grotesk'] tracking-tight">
-            ทำไมต้องเป็นโทนสีดำกับสีขาว ของ SADIDA?
+            {title || 'ทำไมต้องเป็นโทนสีดำกับสีขาว ของ SADIDA?'}
           </h2>
           <p className="mt-4 text-sm sm:text-base text-neutral-700 font-normal leading-relaxed">
-            เราตัดทอนสีสันที่ไม่จำเป็นออก เพื่อให้คุณสัมผัสกับโครงสร้างที่แท้จริงของรองเท้า 
-            เส้นสายที่คมชัด วัสดุเกรดพรีเมียม และสมรรถนะในการขับเคลื่อนที่พร้อมรับทุกสถานการณ์
+            {description || 'เราตัดทอนสีสันที่ไม่จำเป็นออก เพื่อให้คุณสัมผัสกับโครงสร้างที่แท้จริงของรองเท้า เส้นสายที่คมชัด วัสดุเกรดพรีเมียม และสมรรถนะในการขับเคลื่อนที่พร้อมรับทุกสถานการณ์'}
           </p>
         </div>
 

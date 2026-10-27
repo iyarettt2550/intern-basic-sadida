@@ -2,12 +2,16 @@ import React from 'react';
 import { ArrowUp, Mail, MapPin, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { useWebsiteConfig } from '../config/websiteConfig';
+
 interface FooterProps {
   onScrollToTop?: () => void;
   onNavigateSection?: (sectionId: string) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onScrollToTop }) => {
+  const { brand } = useWebsiteConfig();
+
   const handleScrollTop = () => {
     if (onScrollToTop) {
       onScrollToTop();
@@ -25,22 +29,22 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop }) => {
           {/* Column 1: Brand Info & Logo */}
           <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#ffffff]">
-                <img src="/logo.jpg" alt="Sadida Brand Logo" className="w-full h-full object-contain" />
+              <div className="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#ffffff] overflow-hidden">
+                <img src={brand.brandLogo || '/logo.jpg'} alt={`${brand.brandName} Brand Logo`} className="w-full h-full object-contain" />
               </div>
               <div>
                 <span className="text-2xl font-black tracking-tighter text-white font-['Space_Grotesk'] leading-none">
-                  SADIDA
+                  {brand.brandName || 'SADIDA'}
                 </span>
                 <span className="text-[10px] tracking-[0.25em] text-neutral-400 block font-bold mt-1">
-                  OFFICIAL FOOTWEAR • B&W
+                  {brand.brandTagline || 'OFFICIAL FOOTWEAR • B&W'}
                 </span>
               </div>
             </div>
 
             <p className="text-sm text-neutral-300 leading-relaxed font-normal max-w-sm">
-              Sadida แบรนด์รองเท้าวิ่งและรองเท้าเดินที่คัดสรรวัสดุพรีเมียม โครงสร้างน้ำหนักเบา 
-              และเอกลักษณ์โทนสีดำกับสีขาว สไตล์มินิมอลเหนือกาลเวลา
+              {brand.footerAbout ||
+                'Sadida แบรนด์รองเท้าวิ่งและรองเท้าเดินที่คัดสรรวัสดุพรีเมียม โครงสร้างน้ำหนักเบา และเอกลักษณ์โทนสีดำกับสีขาว สไตล์มินิมอลเหนือกาลเวลา'}
             </p>
 
             <div className="flex items-center gap-3 pt-2">

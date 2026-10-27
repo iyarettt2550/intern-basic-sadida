@@ -7,11 +7,19 @@ import { Link } from 'react-router-dom';
 interface ProductShowcaseProps {
   products: Product[];
   onSelectProduct: (product: Product) => void;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  selectedProductIds?: string[];
 }
 
 export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
   products,
   onSelectProduct,
+  title,
+  subtitle,
+  badge,
+  selectedProductIds,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
   const [viewMode, setViewMode] = useState<'carousel' | 'grid'>('carousel');
@@ -31,8 +39,22 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
   const thumbWidthPercentRef = useRef<number>(30);
   const [thumbWidthPercent] = useState<number>(30);
 
-  // Filter products by category
-  const filteredProducts = products.filter((p) => {
+  // Filter products by selected IDs first (if configured), then by category
+  const baseProducts =
+    selectedProductIds && selectedProductIds.length > 0
+      ? products.filter((p) => selectedProductIds.includes(p.proId))
+      : products;
+
+  // Extract all unique categories dynamically from base products
+  const availableCategories = React.useMemo(() => {
+    const set = new Set<string>();
+    baseProducts.forEach((p) => {
+      if (p.categoryName) set.add(p.categoryName);
+    });
+    return Array.from(set);
+  }, [baseProducts]);
+
+  const filteredProducts = baseProducts.filter((p) => {
     if (selectedCategory === 'all') return true;
     return p.categoryName === selectedCategory;
   });
@@ -169,20 +191,24 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
         <div>
           <div className="flex items-center gap-2 text-xs font-black text-black uppercase tracking-widest mb-2">
             <Sparkles className="w-3.5 h-3.5 text-black" />
-            <span>Sadida Collection 2026</span>
+            <span>{badge || 'Sadida Collection 2026'}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-black uppercase font-['Space_Grotesk'] tracking-tight">
-            สินค้าของแบรนด์ SADIDA
+            {title || 'สินค้าของแบรนด์ SADIDA'}
           </h2>
           <p className="mt-2 text-sm text-neutral-600 max-w-xl font-normal">
-            เลือกช้อปรองเท้าคุณภาพสูง แบ่งออกเป็น 2 ประเภทหลัก ได้แก่ <strong className="text-black">รองเท้าวิ่ง</strong> สำหรับความเร็ว และ <strong className="text-black">รองเท้าเดิน</strong> สำหรับความสบายทุกวัน
+            {subtitle || (
+              <>
+                เลือกช้อปรองเท้าคุณภาพสูง แบ่งออกเป็น 2 ประเภทหลัก ได้แก่ <strong className="text-black">รองเท้าวิ่ง</strong> สำหรับความเร็ว และ <strong className="text-black">รองเท้าเดิน</strong> สำหรับความสบายทุกวัน
+              </>
+            )}
           </p>
         </div>
 
         {/* Filter Tabs & View Toggle */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Category Filter Pills */}
-          <div className="flex items-center p-1 bg-white border-2 border-black rounded-2xl shadow-[3px_3px_0px_#000000]">
+          <div className="flex flex-wrap items-center p-1 bg-white border-2 border-black rounded-2xl shadow-[3px_3px_0px_#000000]">
             <button
               onClick={() => setSelectedCategory('all')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
@@ -191,28 +217,21 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
                   : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
               }`}
             >
-              ทั้งหมด ({products.length})
+              ทั้งหมด ({baseProducts.length})
             </button>
-            <button
-              onClick={() => setSelectedCategory('รองเท้าวิ่ง')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                selectedCategory === 'รองเท้าวิ่ง'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
-              }`}
-            >
-              รองเท้าวิ่ง
-            </button>
-            <button
-              onClick={() => setSelectedCategory('รองเท้าเดิน')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                selectedCategory === 'รองเท้าเดิน'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
-              }`}
-            >
-              รองเท้าเดิน
-            </button>
+            {availableCategories.map((catName) => (
+              <button
+                key={catName}
+                onClick={() => setSelectedCategory(catName)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                  selectedCategory === catName
+                    ? 'bg-black text-white shadow-sm'
+                    : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
+                }`}
+              >
+                {catName}
+              </button>
+            ))}
           </div>
 
           {/* Toggle View Mode */}

@@ -14,11 +14,15 @@ export const contactSchema = z.object({
 export type ContactInput = z.infer<typeof contactSchema>;
 
 // Validator for POST /api/auth/login
-export const loginSchema = z.object({
-  phone: z
-    .string()
-    .regex(/^[0-9]{9,10}$/, "เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก"),
-  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
-});
+export const loginSchema = z
+  .object({
+    username: z.string().optional(),
+    userName: z.string().optional(),
+    phone: z.string().optional(),
+    password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
+  })
+  .refine((data) => !!(data.username || data.userName || data.phone), {
+    message: "กรุณากรอกชื่อผู้ใช้หรือเบอร์โทรศัพท์",
+  });
 
 export type LoginInput = z.infer<typeof loginSchema>;

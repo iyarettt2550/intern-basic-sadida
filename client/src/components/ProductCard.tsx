@@ -63,7 +63,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
               <Tag className="w-3 h-3 text-black" />
               {isRunning ? 'Performance Running' : 'Daily Walking'}
             </span>
-            <span className="text-neutral-500 font-mono text-[11px]">{product.proId}</span>
           </div>
 
           {/* Product Name */}

@@ -27,12 +27,13 @@ CREATE TABLE "product" (
 	"pro_name" varchar(50) NOT NULL,
 	"description" varchar(100) NOT NULL,
 	"img" varchar(200) NOT NULL,
-	"prodetail_id" varchar(12) NOT NULL,
-	"category_id" varchar(10) NOT NULL
+	"price" double NOT NULL,
+	"category_id" varchar(10) NOT NULL	
 );
 --> statement-breakpoint
 CREATE TABLE "categories" (
 	"category_id" varchar(6) PRIMARY KEY NOT NULL,
+	"pro_id" varchar(20) NOT NULL,
 	"category_name" varchar(50) NOT NULL
 );
 --> statement-breakpoint

@@ -1,14 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ProductCard } from '../components/ProductCard';
 import { ProductDetailModal } from '../components/ProductDetailModal';
-import { initialProducts } from '../data/mockProducts';
 import type { Product, CategoryFilter } from '../types';
+import {
+  getCachedProducts,
+  loadAllProducts,
+  PRODUCTS_UPDATED_EVENT,
+  loadAllCategories,
+  getCachedCategories,
+  CATEGORIES_UPDATED_EVENT,
+} from '../utils/productStore';
+import type { CategoryItem } from '../utils/productStore';
 import { Search, Filter, SlidersHorizontal, Sparkles, RotateCcw } from 'lucide-react';
+import { useWebsiteConfig } from '../config/websiteConfig';
 
 export const ProductsPage: React.FC = () => {
+  const { isSectionVisible, getSectionText } = useWebsiteConfig();
+  const showSidebar = isSectionVisible('products', 'sidebar');
+  const showProductGrid = isSectionVisible('products', 'productGrid');
+  const pageTitle = getSectionText('products', 'productGrid', 'title', 'สินค้าทั้งหมด (PRODUCTS)');
+  const sidebarTitle = getSectionText('products', 'sidebar', 'title', 'Navbar Menu');
+  const emptyMessage = getSectionText('products', 'productGrid', 'emptyMessage', 'ไม่พบสินค้าตรงกับเงื่อนไขการค้นหา');
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get('category');
 
@@ -16,21 +31,95 @@ export const ProductsPage: React.FC = () => {
   const getInitialCategory = (): CategoryFilter => {
     if (categoryParam === 'running') return 'รองเท้าวิ่ง';
     if (categoryParam === 'walking') return 'รองเท้าเดิน';
+    if (categoryParam) return categoryParam;
     return 'all';
   };
 
+  const [allProducts, setAllProducts] = useState<Product[]>(getCachedProducts());
+  const [categories, setCategories] = useState<CategoryItem[]>(getCachedCategories());
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(getInitialCategory());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSize, setSelectedSize] = useState<string>('all');
   const [selectedPriceRange, setSelectedPriceRange] = useState<string>('all');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Available UK Sizes for filter
-  const allSizes = ['6 UK', '7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK', '10 UK', '10.5 UK', '11 UK'];
+  useEffect(() => {
+    loadAllProducts().then((p) => {
+      if (Array.isArray(p)) setAllProducts(p);
+    });
+
+    loadAllCategories().then((c) => {
+      if (Array.isArray(c)) setCategories(c);
+    });
+
+    const handleProductsUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<Product[]>;
+      if (Array.isArray(customEvent.detail)) {
+        setAllProducts(customEvent.detail);
+      } else {
+        setAllProducts(getCachedProducts());
+      }
+    };
+
+    const handleCategoriesUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<CategoryItem[]>;
+      if (Array.isArray(customEvent.detail)) {
+        setCategories(customEvent.detail);
+      } else {
+        setCategories(getCachedCategories());
+      }
+    };
+
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, handleProductsUpdated);
+    window.addEventListener(CATEGORIES_UPDATED_EVENT, handleCategoriesUpdated);
+    return () => {
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, handleProductsUpdated);
+      window.removeEventListener(CATEGORIES_UPDATED_EVENT, handleCategoriesUpdated);
+    };
+  }, []);
+
+  // Compute all unique categories combining stored categories and products
+  const uniqueCategories = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c) => map.set(c.categoryName, c.categoryId));
+    allProducts.forEach((p) => {
+      if (p.categoryName && !map.has(p.categoryName)) {
+        map.set(p.categoryName, p.categoryId);
+      }
+    });
+    return Array.from(map.entries()).map(([name, id]) => ({ categoryName: name, categoryId: id }));
+  }, [categories, allProducts]);
+
+  // Dynamically compute available UK Sizes directly from database products
+  const allSizes = useMemo(() => {
+    const sizeSet = new Set<string>();
+    allProducts.forEach((p) => {
+      if (p.prodetailSize) {
+        const formatted = p.prodetailSize.toUpperCase().includes('UK')
+          ? p.prodetailSize
+          : `${p.prodetailSize} UK`;
+        sizeSet.add(formatted);
+      }
+      if (Array.isArray(p.sizes)) {
+        p.sizes.forEach((s: string) => {
+          if (s) {
+            const formatted = s.toUpperCase().includes('UK') ? s : `${s} UK`;
+            sizeSet.add(formatted);
+          }
+        });
+      }
+    });
+
+    return Array.from(sizeSet).sort((a, b) => {
+      const numA = parseFloat(a) || 0;
+      const numB = parseFloat(b) || 0;
+      return numA - numB;
+    });
+  }, [allProducts]);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
+    return allProducts.filter((product) => {
       // Category filter
       if (selectedCategory !== 'all' && product.categoryName !== selectedCategory) {
         return false;
@@ -47,7 +136,10 @@ export const ProductsPage: React.FC = () => {
 
       // Size filter
       if (selectedSize !== 'all') {
-        if (!product.sizes.includes(selectedSize)) return false;
+        const hasSize =
+          (Array.isArray(product.sizes) && product.sizes.includes(selectedSize)) ||
+          product.prodetailSize === selectedSize;
+        if (!hasSize) return false;
       }
 
       // Price filter
@@ -57,7 +149,7 @@ export const ProductsPage: React.FC = () => {
 
       return true;
     });
-  }, [selectedCategory, searchQuery, selectedSize, selectedPriceRange]);
+  }, [allProducts, selectedCategory, searchQuery, selectedSize, selectedPriceRange]);
 
   const handleCategoryChange = (cat: CategoryFilter) => {
     setSelectedCategory(cat);
@@ -89,12 +181,14 @@ export const ProductsPage: React.FC = () => {
               <span className="text-black">แคตตาล็อกสินค้า</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight font-['Space_Grotesk']">
-              สินค้าทั้งหมด (PRODUCTS)
+              {pageTitle}
             </h1>
           </div>
           <div className="flex items-center gap-2 text-xs font-bold bg-white border-2 border-black px-4 py-2 rounded-xl shadow-[2px_2px_0px_#000000]">
             <Sparkles className="w-4 h-4" />
-            <span>2 ประเภทสินค้า: รองเท้าวิ่ง & รองเท้าเดิน</span>
+            <span>
+              {uniqueCategories.length} หมวดหมู่สินค้า: {uniqueCategories.map((c) => c.categoryName).join(' & ')}
+            </span>
           </div>
         </div>
       </div>
@@ -104,14 +198,15 @@ export const ProductsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* LEFT COLUMN: Navbar Menu (Sidebar filter matching wireframe) */}
-          <aside className="lg:col-span-3 bg-white border-2 border-black rounded-3xl p-6 shadow-[6px_6px_0px_#000000] sticky top-28">
-            <div className="flex items-center justify-between pb-4 border-b-2 border-black mb-6">
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-black" />
-                <h2 className="text-base font-black uppercase tracking-wider font-['Space_Grotesk']">
-                  Navbar Menu
-                </h2>
-              </div>
+          {showSidebar && (
+            <aside className="lg:col-span-3 bg-white border-2 border-black rounded-3xl p-6 shadow-[6px_6px_0px_#000000] sticky top-28">
+              <div className="flex items-center justify-between pb-4 border-b-2 border-black mb-6">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-black" />
+                  <h2 className="text-base font-black uppercase tracking-wider font-['Space_Grotesk']">
+                    {sidebarTitle}
+                  </h2>
+                </div>
               <button
                 onClick={handleResetFilters}
                 className="text-xs font-bold text-neutral-600 hover:text-black flex items-center gap-1 cursor-pointer"
@@ -138,37 +233,36 @@ export const ProductsPage: React.FC = () => {
                 >
                   <span>สินค้าทั้งหมด</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'all' ? 'bg-white text-black' : 'bg-neutral-200 text-black'}`}>
-                    {initialProducts.length}
+                    {allProducts.length}
                   </span>
                 </button>
 
-                <button
-                  onClick={() => handleCategoryChange('รองเท้าวิ่ง')}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                    selectedCategory === 'รองเท้าวิ่ง'
-                      ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
-                      : 'bg-white hover:bg-neutral-100 text-black border-black'
-                  }`}
-                >
-                  <span>รองเท้าวิ่ง (Running)</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'รองเท้าวิ่ง' ? 'bg-white text-black' : 'bg-neutral-200 text-black'}`}>
-                    {initialProducts.filter((p) => p.categoryName === 'รองเท้าวิ่ง').length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => handleCategoryChange('รองเท้าเดิน')}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
-                    selectedCategory === 'รองเท้าเดิน'
-                      ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
-                      : 'bg-white hover:bg-neutral-100 text-black border-black'
-                  }`}
-                >
-                  <span>รองเท้าเดิน (Walking)</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${selectedCategory === 'รองเท้าเดิน' ? 'bg-white text-black' : 'bg-neutral-200 text-black'}`}>
-                    {initialProducts.filter((p) => p.categoryName === 'รองเท้าเดิน').length}
-                  </span>
-                </button>
+                {uniqueCategories.map((cat) => {
+                  const count = allProducts.filter(
+                    (p) => p.categoryName === cat.categoryName || p.categoryId === cat.categoryId
+                  ).length;
+                  const isSelected = selectedCategory === cat.categoryName;
+                  return (
+                    <button
+                      key={cat.categoryId}
+                      onClick={() => handleCategoryChange(cat.categoryName)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-black text-white border-black shadow-[2px_2px_0px_#000000]'
+                          : 'bg-white hover:bg-neutral-100 text-black border-black'
+                      }`}
+                    >
+                      <span className="truncate">{cat.categoryName}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${
+                          isSelected ? 'bg-white text-black' : 'bg-neutral-200 text-black'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -233,10 +327,12 @@ export const ProductsPage: React.FC = () => {
               </div>
             </div>
 
-          </aside>
+            </aside>
+          )}
 
           {/* RIGHT COLUMN: Search Bar & Product Grid matching wireframe */}
-          <main className="lg:col-span-9 space-y-6">
+          {showProductGrid ? (
+            <main className={`${showSidebar ? 'lg:col-span-9' : 'lg:col-span-12'} space-y-6`}>
             
             {/* Top Right: Search Box "ค้นหา" (ตรงตามภาพร่างกล่องค้นหาด้านบนขวา) */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 bg-neutral-50 border-2 border-black rounded-2xl shadow-[4px_4px_0px_#000000]">
@@ -309,7 +405,7 @@ export const ProductsPage: React.FC = () => {
               /* Empty Search State */
               <div className="py-20 text-center bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-3xl p-8">
                 <h3 className="text-xl font-bold font-['Space_Grotesk'] text-black mb-2">
-                  ไม่พบสินค้าตรงกับเงื่อนไขการค้นหา
+                  {emptyMessage}
                 </h3>
                 <p className="text-sm text-neutral-600 mb-6">
                   ลองเปลี่ยนคำค้นหา หรือรีเซ็ตตัวกรองเพื่อดูรองเท้าทั้งหมด
@@ -324,6 +420,13 @@ export const ProductsPage: React.FC = () => {
             )}
 
           </main>
+          ) : (
+            <div className={`${showSidebar ? 'lg:col-span-9' : 'lg:col-span-12'} py-20 text-center bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-3xl p-8`}>
+              <h3 className="text-xl font-bold font-['Space_Grotesk'] text-black mb-2">
+                ส่วนรายการสินค้าถูกซ่อนอยู่โดยผู้ดูแลระบบ
+              </h3>
+            </div>
+          )}
 
         </div>
       </div>

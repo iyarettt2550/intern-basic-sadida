@@ -12,7 +12,7 @@ export interface Product {
   isPopular?: boolean;
 }
 
-export type CategoryFilter = 'all' | 'รองเท้าวิ่ง' | 'รองเท้าเดิน';
+export type CategoryFilter = 'all' | 'รองเท้าวิ่ง' | 'รองเท้าเดิน' | string;
 
 export interface GridSectionConfig {
   id: string;

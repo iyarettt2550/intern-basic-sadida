@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 
+import { useWebsiteConfig } from '../config/websiteConfig';
+
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { brand } = useWebsiteConfig();
 
   const navItems = [
     { path: '/', label: 'Brand Home', id: 'home' },
@@ -18,32 +21,40 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b-2 border-black transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          
-          {/* Brand Logo & Name */}
-          <Link 
-            to="/"
-            className="flex items-center gap-3 group cursor-pointer"
-          >
-            {/* Logo Image from public/logo.jpg */}
-            <div className="relative w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000000] group-hover:-translate-y-0.5 transition-transform duration-200">
-              <img 
-                src="/logo.jpg" 
-                alt="Sadida Brand Logo" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-black tracking-tighter text-black font-['Space_Grotesk'] leading-none">
-                SADIDA
-              </span>
-              <span className="text-[10px] tracking-[0.25em] text-neutral-600 uppercase font-bold mt-1">
-                FOOTWEAR • BLACK & WHITE
-              </span>
-            </div>
-          </Link>
+    <>
+      {/* Optional Top Announcement Bar */}
+      {brand.showTopNotice && brand.topNotice && (
+        <div className="bg-black text-white text-xs font-bold py-2 px-4 text-center border-b border-neutral-800 tracking-wide flex items-center justify-center gap-2">
+          <span>{brand.topNotice}</span>
+        </div>
+      )}
+
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b-2 border-black transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
+            
+            {/* Brand Logo & Name */}
+            <Link 
+              to="/"
+              className="flex items-center gap-3 group cursor-pointer"
+            >
+              {/* Logo Image */}
+              <div className="relative w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000000] group-hover:-translate-y-0.5 transition-transform duration-200 overflow-hidden">
+                <img 
+                  src={brand.brandLogo || '/logo.jpg'} 
+                  alt={`${brand.brandName} Brand Logo`} 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black tracking-tighter text-black font-['Space_Grotesk'] leading-none">
+                  {brand.brandName || 'SADIDA'}
+                </span>
+                <span className="text-[10px] tracking-[0.25em] text-neutral-600 uppercase font-bold mt-1">
+                  {brand.brandTagline || 'FOOTWEAR • BLACK & WHITE'}
+                </span>
+              </div>
+            </Link>
 
           {/* Navigation Pill Buttons (ตรงตามภาพสเก็ตช์ [แบนร์] [สินค้า] [ติดต่อ]) */}
           <nav className="hidden md:flex items-center gap-3 p-1.5 bg-neutral-100 border-2 border-black rounded-full shadow-[3px_3px_0px_#000000]">
@@ -108,5 +119,6 @@ export const Navbar: React.FC = () => {
         </div>
       )}
     </header>
+  </>
   );
 };
