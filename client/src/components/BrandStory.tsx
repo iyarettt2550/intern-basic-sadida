@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Wind, Feather, Footprints, Award, RefreshCw } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 interface BrandStoryProps {
   title?: string;
@@ -29,7 +29,7 @@ export const BrandStory: React.FC<BrandStoryProps> = ({ title, description }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
           
           {/* 01 รองเท้าวิ่ง (Running) */}
-          <div className="relative rounded-3xl p-8 sm:p-10 bg-white border-2 border-black shadow-[6px_6px_0px_#000000] hover:shadow-[9px_9px_0px_#000000] transition-all duration-200 group overflow-hidden">
+          {/* <div className="relative rounded-3xl p-8 sm:p-10 bg-white border-2 border-black shadow-[6px_6px_0px_#000000] hover:shadow-[9px_9px_0px_#000000] transition-all duration-200 group overflow-hidden">
             <div className="absolute top-0 right-0 p-8 text-7xl font-black text-neutral-200/80 select-none font-['Space_Grotesk']">
               01
             </div>
@@ -61,10 +61,10 @@ export const BrandStory: React.FC<BrandStoryProps> = ({ title, description }) =>
                 </li>
               </ul>
             </div>
-          </div>
+          </div> */}
 
           {/* 02 รองเท้าเดิน (Walking) */}
-          <div className="relative rounded-3xl p-8 sm:p-10 bg-white border-2 border-black shadow-[6px_6px_0px_#000000] hover:shadow-[9px_9px_0px_#000000] transition-all duration-200 group overflow-hidden">
+          {/* <div className="relative rounded-3xl p-8 sm:p-10 bg-white border-2 border-black shadow-[6px_6px_0px_#000000] hover:shadow-[9px_9px_0px_#000000] transition-all duration-200 group overflow-hidden">
             <div className="absolute top-0 right-0 p-8 text-7xl font-black text-neutral-200/80 select-none font-['Space_Grotesk']">
               02
             </div>
@@ -96,7 +96,7 @@ export const BrandStory: React.FC<BrandStoryProps> = ({ title, description }) =>
                 </li>
               </ul>
             </div>
-          </div>
+          </div> */}
 
         </div>
 

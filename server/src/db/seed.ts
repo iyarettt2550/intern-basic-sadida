@@ -156,7 +156,15 @@ async function seed() {
     // ──────────────────────────────────────────────
     // 5. Users (ผู้ใช้เริ่มต้น — แอดมิน 1 คน)
     // ──────────────────────────────────────────────
-    console.log("📌 5/6 — เพิ่ม Users (แอดมินเริ่มต้น)...");
+    console.log("📌 5/6 — เพิ่ม Users (แอดมินเริ่มต้น พร้อม hash รหัสผ่าน)...");
+    const initialPassword = process.env.ADMIN_INITIAL_PASSWORD;
+    if (!initialPassword) {
+      throw new Error("ADMIN_INITIAL_PASSWORD is not defined");
+    }
+    const adminPasswordHash = await Bun.password.hash(initialPassword, {
+      algorithm: "bcrypt",
+      cost: 10,
+    });
     await db
       .insert(users)
       .values([
@@ -164,12 +172,12 @@ async function seed() {
           usersId: "usr_admin_001",
           usersName: "Admin Sadida",
           phone: "0812345678",
-          passwordHash: "12345",  // ในการใช้งานจริงควร hash ด้วย Bun.password
+          passwordHash: adminPasswordHash,
           userRolesId: "r_1",                // Admin
         },
       ])
       .onConflictDoNothing();
-    console.log("  ✅ Users: Admin Sadida (usr_admin_001)\n");
+    console.log("  ✅ Users: Admin Sadida (usr_admin_001) — รหัสผ่านถูก hash ด้วย bcrypt แล้ว\n");
 
     // ──────────────────────────────────────────────
     // 6. Contacts (ข้อความติดต่อตัวอย่าง)

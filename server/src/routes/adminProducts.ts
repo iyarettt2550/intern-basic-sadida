@@ -24,9 +24,18 @@ router.get("/", async (c) => {
 
     const allDetails = await db.select().from(productDetail);
 
+const sortSizeList = (list: string[]): string[] => {
+  return [...list].sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+};
+
     const items = products.map((p) => {
       const details = allDetails.filter((d) => d.proId === p.proId);
-      const sizes = details.map((d) => d.prodetailSize);
+      const sizes = sortSizeList(details.map((d) => d.prodetailSize));
       return {
         ...p,
         prodetailId: details[0]?.prodetailId || "",
@@ -116,6 +125,24 @@ router.post("/categories", async (c) => {
 router.delete("/categories/:id", async (c) => {
   try {
     const id = c.req.param("id");
+
+    // Check if category has any products
+    const existingProducts = await db
+      .select({ proId: product.proId })
+      .from(product)
+      .where(eq(product.categoryId, id));
+
+    if (existingProducts.length > 0) {
+      return c.json(
+        {
+          success: false,
+          error: "มีสินค้าอยู่ในหมวดหมู่นี้อยู่ไม่สามารถลบได้",
+          message: `มีสินค้าอยู่ในหมวดหมู่นี้อยู่ไม่สามารถลบได้ (พบสินค้า ${existingProducts.length} รายการ)`,
+        },
+        400
+      );
+    }
+
     await db.delete(categories).where(eq(categories.categoryId, id));
     return c.json({ success: true, message: "ลบหมวดหมู่เรียบร้อยแล้ว" });
   } catch (error: any) {
@@ -239,7 +266,7 @@ router.get("/:id", async (c) => {
       .select()
       .from(productDetail)
       .where(eq(productDetail.proId, id));
-    const sizes = details.map((d) => d.prodetailSize);
+    const sizes = sortSizeList(details.map((d) => d.prodetailSize));
 
     return c.json({
       success: true,
@@ -327,7 +354,9 @@ router.post("/", async (c) => {
       sizesToInsert.push(prodetailSize);
     }
 
-    for (const s of sizesToInsert) {
+    const sortedSizesToInsert = sortSizeList(sizesToInsert);
+
+    for (const s of sortedSizesToInsert) {
       const rawSize = String(s).trim();
       if (!rawSize) continue;
       const formatted = rawSize.toUpperCase().includes("UK") ? rawSize : `${rawSize} UK`;
@@ -392,6 +421,7 @@ router.put("/:id", async (c) => {
     }
 
     if (sizesToUpdate.length > 0) {
+      const sortedSizesToUpdate = sortSizeList(sizesToUpdate);
       await db.delete(productDetail).where(eq(productDetail.proId, id));
       const allDetails = await db.select().from(productDetail);
       let maxDetailNum = 0;
@@ -403,7 +433,7 @@ router.put("/:id", async (c) => {
         }
       }
       let nextDetailIndex = maxDetailNum + 1;
-      for (const s of sizesToUpdate) {
+      for (const s of sortedSizesToUpdate) {
         const rawSize = String(s).trim();
         if (!rawSize) continue;
         const formatted = rawSize.toUpperCase().includes("UK") ? rawSize : `${rawSize} UK`;

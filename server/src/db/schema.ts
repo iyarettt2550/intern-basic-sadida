@@ -49,7 +49,7 @@ export const users = pgTable("users", {
   usersId: varchar("users_id", { length: 50 }).primaryKey(),
   usersName: varchar("users_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 10 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 50 }).notNull(),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   userRolesId: varchar("user_roles_id", { length: 5 })
     .notNull()
     .references(() => userRoles.userRolesId),

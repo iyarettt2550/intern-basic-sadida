@@ -37,6 +37,7 @@ import {
   getCachedProducts,
   loadAllProducts,
   PRODUCTS_UPDATED_EVENT,
+  uploadProductImage,
 } from '../../utils/productStore';
 import type { Product } from '../../types';
 
@@ -79,9 +80,10 @@ export const AdminWebsite: React.FC = () => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState<'brand' | 'home' | 'products' | 'contact'>('brand');
   const [editingText, setEditingText] = useState<{ sectionId: string; key: string } | null>(null);
-  const [editingImage, setEditingImage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [logoUploadMsg, setLogoUploadMsg] = useState<string | null>(null);
+  const [uploadingSectionImage, setUploadingSectionImage] = useState(false);
+  const [sectionUploadSuccess, setSectionUploadSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load from localStorage or use defaults and sync dynamic products
@@ -190,7 +192,40 @@ export const AdminWebsite: React.FC = () => {
         };
       })
     );
-    setEditingImage(null);
+  };
+
+  // Upload section image from local device (e.g. Hero Banner)
+  const handleSectionImageUpload = async (pageId: string, sectionId: string, file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WebP, SVG)');
+      return;
+    }
+    setUploadingSectionImage(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (readerEvent) => {
+        const rawDataUrl = readerEvent.target?.result as string;
+        try {
+          const uploadedUrl = await uploadProductImage(rawDataUrl);
+          updateImage(pageId, sectionId, uploadedUrl);
+          setSectionUploadSuccess(`อัปโหลดรูปภาพ "${file.name}" สำหรับแบนเนอร์หลักเรียบร้อยแล้ว! อย่าลืมกดบันทึกการเปลี่ยนแปลง`);
+          setTimeout(() => setSectionUploadSuccess(null), 4000);
+        } catch (uploadErr) {
+          console.warn('Backend image upload failed, using dataUrl fallback', uploadErr);
+          updateImage(pageId, sectionId, rawDataUrl);
+          setSectionUploadSuccess(`อัปโหลดรูปภาพ "${file.name}" เรียบร้อยแล้ว! อย่าลืมกดบันทึกการเปลี่ยนแปลง`);
+          setTimeout(() => setSectionUploadSuccess(null), 4000);
+        } finally {
+          setUploadingSectionImage(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Failed to read image:', err);
+      alert('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ');
+      setUploadingSectionImage(false);
+    }
   };
 
   // Logo upload from local device
@@ -697,53 +732,128 @@ export const AdminWebsite: React.FC = () => {
               <div className="p-6 space-y-6">
                 {/* 1. Image Editor */}
                 {section.image !== undefined && (
-                  <div className="bg-neutral-50 border-2 border-neutral-200 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <ImageIcon className="w-4 h-4 text-black" />
-                      <span className="text-xs font-black uppercase text-black">รูปภาพประจำส่วน</span>
+                  <div className="bg-neutral-50 border-2 border-neutral-200 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-black" />
+                        <span className="text-xs font-black uppercase text-black">
+                          {section.id === 'hero' ? 'รูปภาพแบนเนอร์หลัก (Hero Banner Image)' : 'รูปภาพประจำส่วน'}
+                        </span>
+                      </div>
+                      {section.id === 'hero' && (
+                        <span className="text-[11px] font-bold text-black bg-white px-2.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000000]">
+                          แบนเนอร์หน้าแรก
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-5 items-start">
-                      <div className="w-48 h-28 bg-white border-2 border-black rounded-xl overflow-hidden flex-shrink-0 shadow-[3px_3px_0px_#000000]">
-                        <img src={section.image} alt="Section" className="w-full h-full object-cover" />
+                    {sectionUploadSuccess && (
+                      <div className="p-3 bg-emerald-50 border-2 border-emerald-600 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                        <Check className="w-4 h-4 flex-shrink-0" />
+                        <span>{sectionUploadSuccess}</span>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col md:flex-row gap-5 items-start">
+                      {/* Current image preview */}
+                      <div className="w-full md:w-64 h-36 bg-white border-2 border-black rounded-xl overflow-hidden flex-shrink-0 shadow-[3px_3px_0px_#000000] relative group">
+                        <img
+                          src={section.image}
+                          alt="Section preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/hero_sketch.jpg';
+                          }}
+                        />
+                        <span className="absolute bottom-1 left-1 right-1 text-[9px] font-mono bg-black/80 text-white px-1.5 py-0.5 rounded truncate">
+                          {section.image}
+                        </span>
                       </div>
 
-                      {editingImage === section.id ? (
-                        <div className="flex-1 space-y-2 w-full">
-                          <label className="text-xs font-bold text-neutral-600">เลือกรูปใหม่:</label>
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {/* Controls: Upload & Preset Picker */}
+                      <div className="flex-1 space-y-4 w-full">
+                        {/* Upload Button Area */}
+                        <div className="p-4 bg-white border-2 border-black rounded-xl shadow-[2px_2px_0px_#000000]">
+                          <label className="block text-xs font-black text-black mb-1">
+                            อัปโหลดรูปภาพใหม่จากคอมพิวเตอร์ของคุณ
+                          </label>
+                          <p className="text-[11px] text-neutral-500 mb-3">
+                            {section.id === 'hero'
+                              ? 'เลือกไฟล์รูปภาพเพื่อใช้เป็นแบนเนอร์หลักของหน้าแรก (รองรับ JPG, PNG, WebP, SVG)'
+                              : 'เลือกไฟล์รูปภาพจากอุปกรณ์เพื่อเปลี่ยนรูปส่วนนี้'}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label className="px-4 py-2.5 bg-black hover:bg-neutral-800 text-white font-bold text-xs rounded-xl border-2 border-black shadow-[3px_3px_0px_#000000] hover:shadow-[1px_1px_0px_#000000] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer flex items-center gap-2">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>{uploadingSectionImage ? 'กำลังอัปโหลด...' : 'เลือกไฟล์รูปภาพจากเครื่อง'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingSectionImage}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    handleSectionImageUpload(activePage.id, section.id, file);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
+
+                            {section.id === 'hero' && section.image !== '/images/hero_sketch.jpg' && (
+                              <button
+                                type="button"
+                                onClick={() => updateImage(activePage.id, section.id, '/images/hero_sketch.jpg')}
+                                className="px-3 py-2 bg-white text-neutral-600 hover:text-black font-bold text-xs rounded-xl border border-neutral-300 hover:border-black transition-all cursor-pointer"
+                              >
+                                รีเซ็ตเป็นรูปสเก็ตช์เริ่มต้น
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Presets and URL input */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <label className="text-xs font-bold text-neutral-600">หรือเลือกจากคลังรูปภาพในระบบ:</label>
+                          </div>
+                          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                             {AVAILABLE_IMAGES.map((img) => (
                               <button
                                 key={img}
+                                type="button"
                                 onClick={() => updateImage(activePage.id, section.id, img)}
-                                className={`h-16 rounded-xl border-2 overflow-hidden transition-all cursor-pointer ${
+                                className={`h-14 rounded-xl border-2 overflow-hidden transition-all cursor-pointer ${
                                   section.image === img
                                     ? 'border-black shadow-[2px_2px_0px_#000000] ring-2 ring-black'
                                     : 'border-neutral-200 hover:border-black'
                                 }`}
+                                title={img}
                               >
                                 <img src={img} alt="" className="w-full h-full object-cover" />
                               </button>
                             ))}
                           </div>
-                          <button
-                            onClick={() => setEditingImage(null)}
-                            className="text-xs font-bold text-neutral-600 hover:text-black mt-1 cursor-pointer"
-                          >
-                            ✕ ยกเลิก
-                          </button>
                         </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-xs font-mono text-neutral-600 truncate max-w-sm">{section.image}</p>
-                          <button
-                            onClick={() => setEditingImage(section.id)}
-                            className="px-4 py-2 bg-white text-black font-black text-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_#000000] hover:shadow-[1px_1px_0px_#000000] hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer"
-                          >
-                            เปลี่ยนรูปภาพนี้
-                          </button>
+
+                        <div>
+                          <label className="text-xs font-bold text-neutral-600 block mb-1">
+                            หรือระบุ URL / Path รูปภาพ:
+                          </label>
+                          <input
+                            type="text"
+                            value={section.image.startsWith('data:') ? '(รูปภาพที่อัปโหลดจากเครื่อง)' : section.image}
+                            onChange={(e) => {
+                              if (!section.image?.startsWith('data:') || e.target.value !== '(รูปภาพที่อัปโหลดจากเครื่อง)') {
+                                updateImage(activePage.id, section.id, e.target.value);
+                              }
+                            }}
+                            placeholder="/images/hero_sketch.jpg หรือ https://..."
+                            className="w-full px-3.5 py-2 bg-white border-2 border-neutral-300 rounded-xl text-xs font-mono focus:outline-none focus:border-black"
+                          />
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}

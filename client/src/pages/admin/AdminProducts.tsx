@@ -69,6 +69,18 @@ const getNextProductId = (prods: ProductItem[]): string => {
   return `pro_${String(maxNum + 1).padStart(3, '0')}`;
 };
 
+// Helper to sort shoe sizes numerically (e.g. 6 UK, 6.5 UK, 7 UK, 7.5 UK, 8 UK...)
+const sortSizes = (sizes: string[]): string[] => {
+  return [...sizes].sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numA - numB;
+    }
+    return a.localeCompare(b);
+  });
+};
+
 export const AdminProducts: React.FC = () => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [productDetails, setProductDetails] = useState<ProductDetailOption[]>([]);
@@ -104,6 +116,7 @@ export const AdminProducts: React.FC = () => {
   const [newCategoryId, setNewCategoryId] = useState('');
   const [categoryCreating, setCategoryCreating] = useState(false);
   const [categorySuccess, setCategorySuccess] = useState('');
+  const [categoryError, setCategoryError] = useState('');
 
   // Image upload state
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -201,7 +214,7 @@ export const AdminProducts: React.FC = () => {
       img: product.img || '/images/shoe_runner_1.jpg',
       useCustomDetail: true,
       customPrice: product.price || 1800,
-      selectedSizes: initialSizes,
+      selectedSizes: sortSizes(initialSizes),
     });
     setShowEditModal(true);
   };
@@ -218,7 +231,7 @@ export const AdminProducts: React.FC = () => {
       img: '/images/shoe_runner_1.jpg',
       useCustomDetail: true,
       customPrice: 2190,
-      selectedSizes: ['7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK'],
+      selectedSizes: sortSizes(['7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK']),
     });
     setShowAddModal(true);
   };
@@ -229,6 +242,7 @@ export const AdminProducts: React.FC = () => {
     setNewCategoryId(nextCatId);
     setNewCategoryName('');
     setCategorySuccess('');
+    setCategoryError('');
     setShowCategoryModal(true);
   };
 
@@ -258,38 +272,58 @@ export const AdminProducts: React.FC = () => {
 
   // Delete category
   const handleDeleteCategory = async (catId: string) => {
+    setCategoryError('');
+    setCategorySuccess('');
+
+    // Check if category has any products
+    const matchingProducts = products.filter((p) => p.categoryId === catId);
+    if (matchingProducts.length > 0) {
+      const warningMsg = `มีสินค้าอยู่ในหมวดหมู่นี้อยู่ไม่สามารถลบได้ (พบสินค้ารองเท้า ${matchingProducts.length} รายการในหมวดหมู่นี้)`;
+      setCategoryError('มีสินค้าอยู่ในหมวดหมู่นี้อยู่ไม่สามารถลบได้');
+      alert(warningMsg);
+      return;
+    }
+
     if (!confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่?')) return;
     try {
-      await fetch(`${API_BASE}/api/admin/products/categories/${catId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/api/admin/products/categories/${catId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.message || data.error || 'ไม่สามารถลบหมวดหมู่นี้ได้');
+        setCategoryError(data.error || 'ไม่สามารถลบหมวดหมู่นี้ได้');
+        return;
+      }
       setCategories((prev) => {
         const updated = prev.filter((c) => c.categoryId !== catId);
         setNewCategoryId(getNextCategoryId(updated));
         return updated;
       });
       fetchCategories();
+      setCategorySuccess('ลบหมวดหมู่เรียบร้อยแล้ว');
     } catch (err) {
       console.error('Failed to delete category:', err);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
     }
   };
 
-  // Multi-size selection toggles
+  // Multi-size selection toggles (Always keeps sizes sorted numerically)
   const toggleSizeSelection = (size: string) => {
     setFormData((prev) => {
       const exists = prev.selectedSizes.includes(size);
       const updated = exists
         ? prev.selectedSizes.filter((s) => s !== size)
         : [...prev.selectedSizes, size];
-      return { ...prev, selectedSizes: updated };
+      return { ...prev, selectedSizes: sortSizes(updated) };
     });
   };
 
   const selectAllSizes = () => {
-    setFormData((prev) => ({ ...prev, selectedSizes: [...COMMON_UK_SIZES] }));
+    setFormData((prev) => ({ ...prev, selectedSizes: sortSizes(COMMON_UK_SIZES) }));
   };
 
   const selectPopularSizes = () => {
     const popular = ['7 UK', '7.5 UK', '8 UK', '8.5 UK', '9 UK', '9.5 UK', '10 UK'];
-    setFormData((prev) => ({ ...prev, selectedSizes: popular }));
+    setFormData((prev) => ({ ...prev, selectedSizes: sortSizes(popular) }));
   };
 
   const clearAllSizes = () => {
@@ -647,7 +681,7 @@ export const AdminProducts: React.FC = () => {
         ) : (
           <div className="mt-2 text-[11px] text-neutral-600 bg-white p-2.5 rounded-xl border border-neutral-200 flex flex-wrap items-center gap-1.5">
             <span className="font-bold text-black">ไซส์ที่เปิดจำหน่าย:</span>
-            {formData.selectedSizes.map((s) => (
+            {sortSizes(formData.selectedSizes).map((s) => (
               <span
                 key={s}
                 className="px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-800 font-mono font-bold border border-neutral-300"
@@ -866,32 +900,46 @@ export const AdminProducts: React.FC = () => {
                   หมวดหมู่ปัจจุบัน ({categories.length})
                 </label>
                 <div className="space-y-2">
-                  {categories.map((c) => (
-                    <div
-                      key={c.categoryId}
-                      className="flex items-center justify-between p-3 bg-neutral-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_#000000]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Tag className="w-4 h-4 text-neutral-600" />
-                        <span className="text-sm font-bold text-black">{c.categoryName}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-neutral-500 bg-white px-2 py-0.5 rounded border border-neutral-300">
-                          {c.categoryId}
-                        </span>
-                        {c.categoryId !== 'cg_1' && c.categoryId !== 'cg_2' && (
+                  {categories.map((c) => {
+                    const productCount = products.filter((p) => p.categoryId === c.categoryId).length;
+                    return (
+                      <div
+                        key={c.categoryId}
+                        className="flex items-center justify-between p-3 bg-neutral-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_#000000]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-4 h-4 text-neutral-600" />
+                          <span className="text-sm font-bold text-black">{c.categoryName}</span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              productCount > 0
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-neutral-100 text-neutral-500 border-neutral-300'
+                            }`}
+                          >
+                            {productCount} สินค้า
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-neutral-500 bg-white px-2 py-0.5 rounded border border-neutral-300">
+                            {c.categoryId}
+                          </span>
                           <button
                             type="button"
                             onClick={() => handleDeleteCategory(c.categoryId)}
                             className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                            title="ลบหมวดหมู่นี้"
+                            title={
+                              productCount > 0
+                                ? `มีสินค้าอยู่ในหมวดหมู่นี้อยู่ ${productCount} รายการ ไม่สามารถลบได้`
+                                : "ลบหมวดหมู่นี้"
+                            }
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -900,6 +948,13 @@ export const AdminProducts: React.FC = () => {
                 <label className="block text-xs font-black uppercase tracking-wider text-black">
                   + เพิ่มหมวดหมู่ใหม่
                 </label>
+
+                {categoryError && (
+                  <div className="p-3 bg-red-50 border-2 border-red-500 text-red-700 text-xs font-bold rounded-xl flex items-center gap-2">
+                    <span className="flex-shrink-0 text-sm">⚠️</span>
+                    <span>{categoryError}</span>
+                  </div>
+                )}
 
                 {categorySuccess && (
                   <div className="p-3 bg-emerald-50 border-2 border-emerald-600 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-2">

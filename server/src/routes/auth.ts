@@ -61,8 +61,9 @@ router.post("/login", async (c) => {
 
     const foundUser = user[0];
 
-    // Compare password (plaintext for now — schema limits varchar(50))
-    if (foundUser.passwordHash !== password) {
+    // Compare password with bcrypt hash using Bun.password.verify
+    const isPasswordValid = await Bun.password.verify(password, foundUser.passwordHash);
+    if (!isPasswordValid) {
       return c.json(
         { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
         401

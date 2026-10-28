@@ -41,11 +41,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
         </div>
 
         {/* Size Badge */}
-        {product.prodetailSize && (
+        {/* {product.prodetailSize && (
           <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded bg-white border border-black text-[9px] sm:text-[11px] font-mono font-bold text-black shadow-sm">
             ไซส์ {product.prodetailSize}
           </div>
-        )}
+        )} */}
 
         {/* Quick View Overlay on Hover */}
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:flex items-center justify-center z-20">
