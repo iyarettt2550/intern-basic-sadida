@@ -403,7 +403,7 @@ export const ProductsPage: React.FC = () => {
 
             {/* Product Cards Grid: 2 columns on mobile, 3 columns on desktop */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 items-stretch">
                 {filteredProducts.map((product) => (
                   <ProductCard
                     key={product.proId}

@@ -81,7 +81,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
 
               {/* Description */}
-              <p className="mt-4 text-xs sm:text-sm text-neutral-700 font-normal leading-relaxed">
+              <p className="mt-4 text-xs sm:text-sm text-neutral-700 font-normal leading-relaxed whitespace-pre-line">
                 {product.description}
               </p>
 

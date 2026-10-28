@@ -1,4 +1,4 @@
-import { pgTable, varchar, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, varchar, doublePrecision, text } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. categories
@@ -20,7 +20,7 @@ export const productDetail = pgTable("product_detail", {
 export const product = pgTable("product", {
   proId: varchar("pro_id", { length: 20 }).primaryKey(),
   proName: varchar("pro_name", { length: 50 }).notNull(),
-  description: varchar("description", { length: 100 }).notNull(),
+  description: text("description").notNull(),
   img: varchar("img", { length: 200 }).notNull(),
   price: doublePrecision("price").notNull(),
   categoryId: varchar("category_id", { length: 10 })

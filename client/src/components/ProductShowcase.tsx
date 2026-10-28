@@ -273,7 +273,7 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
             onMouseMove={handleCardsMouseMove}
             onMouseUp={handleCardsMouseUpOrLeave}
             onMouseLeave={handleCardsMouseUpOrLeave}
-            className={`flex gap-6 overflow-x-auto pb-4 no-scrollbar select-none ${
+            className={`flex items-stretch gap-6 overflow-x-auto pb-4 pt-1 no-scrollbar select-none ${
               isDraggingCards ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             style={{
@@ -281,7 +281,7 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
             }}
           >
             {filteredProducts.map((prod) => (
-              <div key={prod.proId} className="w-[300px] sm:w-[320px] md:w-[360px] flex-shrink-0">
+              <div key={prod.proId} className="w-[300px] sm:w-[320px] md:w-[360px] flex-shrink-0 flex flex-col">
                 <ProductCard product={prod} onSelect={onSelectProduct} />
               </div>
             ))}
@@ -351,7 +351,7 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
         </div>
       ) : (
         /* Grid Layout */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
           {filteredProducts.map((prod) => (
             <ProductCard key={prod.proId} product={prod} onSelect={onSelectProduct} />
           ))}

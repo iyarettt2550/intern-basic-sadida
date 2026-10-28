@@ -13,10 +13,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
   return (
     <div 
       onClick={() => onSelect(product)}
-      className="group relative flex flex-col bg-white rounded-xl sm:rounded-2xl border-2 border-black overflow-hidden shadow-[3px_3px_0px_#000000] sm:shadow-[4px_4px_0px_#000000] hover:shadow-[5px_5px_0px_#000000] sm:hover:shadow-[7px_7px_0px_#000000] hover:-translate-y-0.5 sm:hover:-translate-y-1 transition-all duration-200 cursor-pointer flex-shrink-0 w-full"
+      className="group relative flex flex-col h-full bg-white rounded-xl sm:rounded-2xl border-2 border-black overflow-hidden shadow-[3px_3px_0px_#000000] sm:shadow-[4px_4px_0px_#000000] hover:shadow-[5px_5px_0px_#000000] sm:hover:shadow-[7px_7px_0px_#000000] hover:-translate-y-0.5 sm:hover:-translate-y-1 transition-all duration-200 cursor-pointer flex-shrink-0 w-full"
     >
       {/* Top Image Box */}
-      <div className="relative aspect-square sm:aspect-[4/3] bg-neutral-100 overflow-hidden p-3 sm:p-6 flex items-center justify-center border-b-2 border-black">
+      <div className="relative aspect-square sm:aspect-[4/3] bg-neutral-100 overflow-hidden p-3 sm:p-6 flex items-center justify-center border-b-2 border-black flex-shrink-0">
         {/* Subtle grid pattern background */}
         <div className="absolute inset-0 bg-grid-light opacity-50 pointer-events-none" />
 
@@ -40,13 +40,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
           )}
         </div>
 
-        {/* Size Badge */}
-        {/* {product.prodetailSize && (
-          <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded bg-white border border-black text-[9px] sm:text-[11px] font-mono font-bold text-black shadow-sm">
-            ไซส์ {product.prodetailSize}
-          </div>
-        )} */}
-
         {/* Quick View Overlay on Hover */}
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:flex items-center justify-center z-20">
           <span className="px-4 py-2 rounded-full bg-black text-white text-xs font-bold flex items-center gap-1.5 shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform border border-black">
@@ -57,8 +50,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
       </div>
 
       {/* Card Body */}
-      <div className="p-2.5 sm:p-5 flex flex-col flex-grow justify-between bg-white text-black">
-        <div>
+      <div className="p-2.5 sm:p-5 flex flex-col flex-1 justify-between bg-white text-black">
+        <div className="flex-1 flex flex-col">
           {/* Category breadcrumb */}
           <div className="hidden sm:flex items-center justify-between text-xs text-neutral-600 mb-1.5 font-medium">
             <span className="flex items-center gap-1">
@@ -72,14 +65,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
             {product.proName}
           </h3>
 
-          {/* Product Description */}
-          <p className="hidden sm:block mt-2 text-xs sm:text-sm text-neutral-600 font-normal line-clamp-2 leading-relaxed">
+          {/* Product Description (จำกัดความยาวสูงสุด 3 บรรทัด) */}
+          <p className="hidden sm:block mt-2 text-xs sm:text-sm text-neutral-600 font-normal line-clamp-3 leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
         </div>
 
         {/* Footer: Price & Action */}
-        <div className="mt-2.5 sm:mt-5 pt-2 sm:pt-4 border-t border-neutral-100 sm:border-t-2 flex items-center justify-between gap-1">
+        <div className="mt-2.5 sm:mt-5 pt-2 sm:pt-4 border-t border-neutral-100 sm:border-t-2 flex items-center justify-between gap-1 flex-shrink-0">
           <div>
             <span className="text-[9px] sm:text-[10px] text-neutral-500 uppercase font-bold tracking-wider block leading-tight">ราคาเริ่มต้น</span>
             <span className="text-sm sm:text-xl font-black text-black font-['Space_Grotesk'] leading-tight">

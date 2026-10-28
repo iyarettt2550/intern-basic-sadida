@@ -6,6 +6,16 @@ import path from "path";
 
 const router = new Hono();
 
+// Helper to sort shoe sizes numerically (e.g. 6.5 UK before 7 UK, 7 UK before 7.5 UK)
+const sortSizeList = (list: string[]): string[] => {
+  return [...list].sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+};
+
 // GET /api/admin/products — list all products (for admin table & storefront)
 router.get("/", async (c) => {
   try {
@@ -23,15 +33,6 @@ router.get("/", async (c) => {
       .leftJoin(categories, eq(product.categoryId, categories.categoryId));
 
     const allDetails = await db.select().from(productDetail);
-
-const sortSizeList = (list: string[]): string[] => {
-  return [...list].sort((a, b) => {
-    const numA = parseFloat(a);
-    const numB = parseFloat(b);
-    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-    return a.localeCompare(b);
-  });
-};
 
     const items = products.map((p) => {
       const details = allDetails.filter((d) => d.proId === p.proId);
@@ -58,9 +59,14 @@ const sortSizeList = (list: string[]): string[] => {
 router.get("/stats/summary", async (c) => {
   try {
     const allProducts = await db.select({ proId: product.proId }).from(product);
+    const allCategories = await db.select().from(categories);
     return c.json({
       success: true,
-      data: { totalProducts: allProducts.length },
+      data: {
+        totalProducts: allProducts.length,
+        totalCategories: allCategories.length,
+        categories: allCategories,
+      },
     });
   } catch (error: any) {
     return c.json(

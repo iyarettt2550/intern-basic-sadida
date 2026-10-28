@@ -12,8 +12,15 @@ interface ContactItem {
   contactsMessage: string;
 }
 
+interface CategoryItem {
+  categoryId: string;
+  categoryName: string;
+}
+
 export const AdminDashboard: React.FC = () => {
   const [totalProducts, setTotalProducts] = useState(0);
+  const [totalCategories, setTotalCategories] = useState(0);
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
   const [totalContacts, setTotalContacts] = useState(0);
   const [recentContacts, setRecentContacts] = useState<ContactItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,17 +28,31 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [prodRes, contRes, contactsListRes] = await Promise.all([
+        const [prodRes, catRes, contRes, contactsListRes] = await Promise.all([
           fetch(`${API_BASE}/api/admin/products/stats/summary`),
+          fetch(`${API_BASE}/api/admin/products/categories`),
           fetch(`${API_BASE}/api/admin/contacts/stats/summary`),
           fetch(`${API_BASE}/api/admin/contacts`),
         ]);
 
         const prodData = await prodRes.json();
+        const catData = await catRes.json();
         const contData = await contRes.json();
         const contactsList = await contactsListRes.json();
 
-        if (prodData.success) setTotalProducts(prodData.data.totalProducts);
+        if (prodData.success) {
+          setTotalProducts(prodData.data.totalProducts);
+          if (typeof prodData.data.totalCategories === 'number') {
+            setTotalCategories(prodData.data.totalCategories);
+          }
+          if (Array.isArray(prodData.data.categories)) {
+            setCategoriesList(prodData.data.categories);
+          }
+        }
+        if (catData.success && Array.isArray(catData.data)) {
+          setCategoriesList(catData.data);
+          setTotalCategories(catData.data.length);
+        }
         if (contData.success) setTotalContacts(contData.data.totalContacts);
         if (contactsList.success) setRecentContacts(contactsList.data.slice(0, 5));
       } catch (err) {
@@ -100,8 +121,12 @@ export const AdminDashboard: React.FC = () => {
             <TrendingUp className="w-5 h-5 text-neutral-400" />
           </div>
           <p className="text-sm font-bold text-neutral-500 mb-1">หมวดหมู่สินค้า</p>
-          <p className="text-4xl font-black text-black font-['Space_Grotesk']">2</p>
-          <p className="text-xs text-neutral-400 mt-1">วิ่ง • เดิน</p>
+          <p className="text-4xl font-black text-black font-['Space_Grotesk']">{totalCategories}</p>
+          <p className="text-xs text-neutral-400 mt-1 truncate" title={categoriesList.map(c => c.categoryName).join(' • ')}>
+            {categoriesList.length > 0
+              ? categoriesList.map((c) => c.categoryName.replace(/^รองเท้า/, '') || c.categoryName).join(' • ')
+              : 'ไม่มีหมวดหมู่'}
+          </p>
         </div>
       </div>
 
