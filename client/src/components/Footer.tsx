@@ -91,17 +91,17 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop }) => {
             <ul className="space-y-2.5 text-sm font-medium">
               <li>
                 <Link to="/" className="text-neutral-300 hover:text-white transition-colors">
-                  แบนร์ / หน้าหลัก
+                  Brand Home
                 </Link>
               </li>
               <li>
                 <Link to="/products" className="text-neutral-300 hover:text-white transition-colors">
-                  สินค้าทั้งหมด
+                  Store
                 </Link>
               </li>
               <li>
                 <Link to="/contact" className="text-neutral-300 hover:text-white transition-colors">
-                  ติดต่อเรา
+                  Contact
                 </Link>
               </li>
             </ul>
@@ -116,13 +116,11 @@ export const Footer: React.FC<FooterProps> = ({ onScrollToTop }) => {
               <li>
                 <Link to="/products?category=running" className="text-neutral-300 hover:text-white transition-colors flex items-center justify-between">
                   <span>รองเท้าวิ่ง (Running)</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">cg_1</span>
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=walking" className="text-neutral-300 hover:text-white transition-colors flex items-center justify-between">
                   <span>รองเท้าเดิน (Walking)</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">cg_2</span>
                 </Link>
               </li>
               <li className="pt-2 text-xs text-neutral-400">

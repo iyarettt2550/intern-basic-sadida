@@ -63,7 +63,7 @@ export const productRelations = relations(product, ({ one, many }) => ({
   }),
   // แก้ไขตรงนี้: เปลี่ยนจาก one เป็น many และลบ fields/references ออก 
   // เพราะฝั่ง product ไม่ได้เก็บ Foreign Key แล้ว
-  details: many(productDetail), 
+  details: many(productDetail),
 }));
 
 // 2. ความสัมพันธ์ฝั่ง Categories (อันนี้ถูกต้องแล้วครับ)

@@ -718,7 +718,7 @@ export const AdminProducts: React.FC = () => {
             className="flex items-center gap-2 px-4 py-3 bg-white text-black font-bold text-sm rounded-xl border-2 border-black shadow-[4px_4px_0px_#000000] hover:shadow-[2px_2px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-200 cursor-pointer"
           >
             <Layers className="w-5 h-5" />
-            <span>เพิ่มหมวดหมู่</span>
+            <span>จัดการหมวดหมู่</span>
           </button>
 
           <button

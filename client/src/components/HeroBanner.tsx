@@ -26,7 +26,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
       <div className="relative rounded-3xl overflow-hidden border-2 border-black bg-white shadow-[8px_8px_0px_#000000]">
         
         {/* Banner Mode Switcher (Sleek pill in top-right corner) */}
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 p-1 bg-white/90 backdrop-blur-md border-2 border-black rounded-full text-xs shadow-[2px_2px_0px_#000000]">
+        {/* <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 p-1 bg-white/90 backdrop-blur-md border-2 border-black rounded-full text-xs shadow-[2px_2px_0px_#000000]">
           <button
             onClick={() => setActiveBanner('sketch')}
             className={`px-3 py-1 rounded-full transition-all duration-200 cursor-pointer font-bold ${
@@ -47,7 +47,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           >
             แบนเนอร์สตูดิโอ
           </button>
-        </div>
+        </div> */}
 
         {/* Hero Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px] lg:min-h-[520px]">
@@ -137,7 +137,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 />
                 
                 {/* Floating Aesthetic Tag matching the sketch lightning sneaker concept */}
-                <div className="absolute bottom-6 right-6 p-4 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-black text-left max-w-xs shadow-[4px_4px_0px_#000000] hidden sm:block">
+                {/* <div className="absolute bottom-6 right-6 p-4 rounded-2xl bg-white/95 backdrop-blur-md border-2 border-black text-left max-w-xs shadow-[4px_4px_0px_#000000] hidden sm:block">
                   <div className="flex items-center gap-2 text-black font-black text-xs tracking-wider uppercase mb-1">
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>The Design Process</span>
@@ -145,7 +145,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   <p className="text-[11px] text-neutral-700 font-medium leading-normal">
                     ร่างแบบด้วยมือสู่ต้นแบบจริง ผลิตขึ้นเพื่อตอบโจทย์ทั้งการเคลื่อนไหวและสไตล์สีดำกับสีขาว
                   </p>
-                </div>
+                </div> */}
               </div>
             ) : (
               <div className="relative w-full h-full group">
