@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowRight, Sparkles, Zap } from 'lucide-react';
+import React from 'react';
+import { ArrowRight, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface HeroBannerProps {
@@ -18,7 +18,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   subtitle,
   image,
 }) => {
-  const [activeBanner, setActiveBanner] = useState<'sketch' | 'panoramic'>('sketch');
+  const activeBanner = 'sketch';
 
   return (
     <section id="hero" className="relative pt-6 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
