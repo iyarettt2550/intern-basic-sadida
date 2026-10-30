@@ -54,7 +54,7 @@ router.post("/login", async (c) => {
 
     if (user.length === 0) {
       return c.json(
-        { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
+        { success: false, error: "ชื่อผู้ใช้ หรือ รหัสผ่านไม่ถูกต้อง" },
         401
       );
     }

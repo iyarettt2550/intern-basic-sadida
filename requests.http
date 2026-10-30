@@ -1,0 +1,146 @@
+@baseUrl = http://localhost:3000
+
+### 1. Health Check
+GET {{baseUrl}}/
+Content-Type: application/json
+
+### 2. Login as Admin (Username)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "userName": "Admin Sadida",
+  "password": "12345"
+}
+
+### 3. Login as Admin (Phone)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "0812345678",
+  "password": "12345"
+}
+
+### 4. Check Auth Session
+GET {{baseUrl}}/api/auth/me
+Content-Type: application/json
+
+### 5. Get Public Products & Sizes (Storefront)
+GET {{baseUrl}}/api/products
+Content-Type: application/json
+
+### 6. Get Public Categories
+GET {{baseUrl}}/api/categories
+Content-Type: application/json
+
+### 7. Send Contact Message
+POST {{baseUrl}}/api/contact
+Content-Type: application/json
+
+{
+  "name": "สมเกียรติ ก้าวหน้า",
+  "email": "somkiat@test.com",
+  "phone": "0899998888",
+  "subject": "สอบถามขนาดรองเท้า",
+  "message": "ต้องการสอบถามว่ารุ่น Sadida Zoom Runner X1 จะมีไซส์ 11 UK เข้ามาเพิ่มไหมครับ?"
+}
+
+### 8. Get All Contacts (Public / Testing)
+GET {{baseUrl}}/api/contact
+Content-Type: application/json
+
+### 9. Admin - Dashboard Products Stats
+GET {{baseUrl}}/api/admin/products/stats/summary
+Content-Type: application/json
+
+### 10. Admin - Dashboard Contacts Stats
+GET {{baseUrl}}/api/admin/contacts/stats/summary
+Content-Type: application/json
+
+### 11. Admin - Get All Products
+GET {{baseUrl}}/api/admin/products
+Content-Type: application/json
+
+### 12. Admin - Get Single Product
+GET {{baseUrl}}/api/admin/products/pro_001
+Content-Type: application/json
+
+### 13. Admin - Create Product
+POST {{baseUrl}}/api/admin/products
+Content-Type: application/json
+
+{
+  "proName": "Sadida Air Velocity 2026",
+  "description": "รองเท้าวิ่งรุ่นใหม่ล่าสุด เสริมแผ่นคาร์บอนไฟเบอร์เพิ่มแรงส่ง รองรับการวิ่งมาราธอน",
+  "img": "/images/shoe_runner_1.jpg",
+  "categoryId": "cg_1",
+  "price": 3290,
+  "sizes": ["7.5 UK", "8 UK", "8.5 UK", "9 UK", "10 UK"]
+}
+
+### 14. Admin - Update Product
+PUT {{baseUrl}}/api/admin/products/pro_007
+Content-Type: application/json
+
+{
+  "proName": "Sadida Air Velocity Pro Edit",
+  "description": "ปรับปรุงดีไซน์สีพิเศษ เบาขึ้น 15% พร้อมพื้นกันลื่นขั้นสูง",
+  "price": 3490,
+  "categoryId": "cg_1",
+  "sizes": ["8 UK", "8.5 UK", "9 UK", "9.5 UK"]
+}
+
+### 15. Admin - Delete Product
+DELETE {{baseUrl}}/api/admin/products/pro_007
+Content-Type: application/json
+
+### 16. Admin - Get All Categories
+GET {{baseUrl}}/api/admin/products/categories
+Content-Type: application/json
+
+### 17. Admin - Create Category
+POST {{baseUrl}}/api/admin/products/categories
+Content-Type: application/json
+
+{
+  "categoryName": "รองเท้าเทรนนิ่ง"
+}
+
+### 18. Admin - Delete Category
+DELETE {{baseUrl}}/api/admin/products/categories/cg_3
+Content-Type: application/json
+
+### 19. Admin - Get All Product Sizes & Details
+GET {{baseUrl}}/api/admin/products/product-details/all
+Content-Type: application/json
+
+### 20. Admin - Add Size to Product
+POST {{baseUrl}}/api/admin/products/product-details
+Content-Type: application/json
+
+{
+  "proId": "pro_001",
+  "prodetailSize": "11 UK"
+}
+
+### 21. Admin - Upload Base64 Image
+POST {{baseUrl}}/api/admin/products/upload
+Content-Type: application/json
+
+{
+  "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+}
+
+### 22. Admin - Get All Contacts
+GET {{baseUrl}}/api/admin/contacts
+Content-Type: application/json
+
+### 23. Admin - Get Single Contact
+GET {{baseUrl}}/api/admin/contacts/cnt_sample_001
+Content-Type: application/json
+
+### 24. Admin - Delete Contact
+DELETE {{baseUrl}}/api/admin/contacts/cnt_sample_001
+Content-Type: application/json
+
