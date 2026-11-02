@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { product, productDetail, categories } from "../db/schema";
 import path from "path";
+import { mkdir, writeFile } from "node:fs/promises";
 
 const router = new Hono();
 
@@ -172,10 +173,20 @@ router.post("/upload", async (c) => {
     if (ext === "jpeg") ext = "jpg";
     if (ext === "svg+xml") ext = "svg";
     const filename = `shoe_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+    const buffer = Buffer.from(matches[2], "base64");
+
+    if (process.env.VERCEL) {
+      return c.json({
+        success: true,
+        message: "อัปโหลดรูปภาพสำเร็จ",
+        data: { url: dataUrl },
+      });
+    }
+
     const uploadDir = path.resolve(process.cwd(), "../client/public/images");
     const filePath = path.join(uploadDir, filename);
-    const buffer = Buffer.from(matches[2], "base64");
-    await Bun.write(filePath, buffer);
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(filePath, buffer);
     return c.json({
       success: true,
       message: "อัปโหลดรูปภาพสำเร็จ",

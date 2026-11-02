@@ -68,7 +68,8 @@ const port = Number(process.env.PORT) || 3000;
 
 export default app;
 
-if (import.meta.main) {
+const bunGlobal = (globalThis as { Bun?: typeof Bun }).Bun;
+if (bunGlobal && import.meta.main) {
   console.log(`🚀 Server starting on http://localhost:${port}`);
-  Bun.serve({ port, fetch: app.fetch });
+  bunGlobal.serve({ port, fetch: app.fetch });
 }

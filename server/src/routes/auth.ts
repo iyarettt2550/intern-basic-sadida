@@ -3,6 +3,7 @@ import { loginSchema } from "../validators";
 import { db } from "../db";
 import { users, userRoles } from "../db/schema";
 import { eq, or, ilike } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const router = new Hono();
 
@@ -61,8 +62,10 @@ router.post("/login", async (c) => {
 
     const foundUser = user[0];
 
-    // Compare password with bcrypt hash using Bun.password.verify
-    const isPasswordValid = await Bun.password.verify(password, foundUser.passwordHash);
+    const bunGlobal = (globalThis as { Bun?: typeof Bun }).Bun;
+    const isPasswordValid = bunGlobal
+      ? await bunGlobal.password.verify(password, foundUser.passwordHash)
+      : await bcrypt.compare(password, foundUser.passwordHash);
     if (!isPasswordValid) {
       return c.json(
         { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
