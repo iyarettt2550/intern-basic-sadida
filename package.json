@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "esbuild": "^0.28.2",
     "kill-port": "^2.0.1"
   },
   "dependencies": {
