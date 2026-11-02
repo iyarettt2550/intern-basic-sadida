@@ -5,8 +5,10 @@ import postgres from "postgres";
 import * as dotenv from "dotenv";
 import * as schema from "./schema";
 
-dotenv.config({ path: ".env.local" });
-dotenv.config();
+if (!process.env.VERCEL) {
+  dotenv.config({ path: ".env.local" });
+  dotenv.config();
+}
 
 const NEON_DEFAULT_URL =
   "postgresql://neondb_owner:npg_f5y8DkpOTmCn@ep-fancy-bread-b3zupoaq-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
