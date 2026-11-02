@@ -1,0 +1,14 @@
+{
+  "name": "intern-basic-sadida",
+  "private": true,
+  "scripts": {
+    "dev:client": "npm run dev --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "free:ports": "kill-port 3000 5173",
+    "start:all": "kill-port 3000 5173 && concurrently -k -n client,server -c cyan,magenta \"npm run dev --prefix client\" \"npm run dev --prefix server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "kill-port": "^2.0.1"
+  }
+}
