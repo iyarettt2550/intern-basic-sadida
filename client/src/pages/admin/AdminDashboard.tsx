@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Package, MessageSquare, Layers, TrendingUp, Clock } from 'lucide-react';
-
-const API_BASE = 'http://localhost:3000';
+import { API_BASE } from '../../utils/productStore';
 
 interface ContactItem {
   contactsId: string;

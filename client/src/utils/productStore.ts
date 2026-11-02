@@ -1,6 +1,6 @@
 import type { Product } from '../types';
 
-export const API_BASE = 'http://localhost:3000';
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
 export const PRODUCTS_UPDATED_EVENT = 'sadida_products_updated';
 export const CATEGORIES_UPDATED_EVENT = 'sadida_categories_updated';
 

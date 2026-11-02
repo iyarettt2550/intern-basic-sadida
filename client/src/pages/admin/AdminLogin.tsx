@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, ShieldCheck } from 'lucide-react';
 import { setCookie } from '../../utils/cookies';
-
-const API_BASE = 'http://localhost:3000';
+import { API_BASE } from '../../utils/productStore';
 
 export const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
