@@ -65,9 +65,10 @@ app.onError((err, c) => {
 });
 
 const port = Number(process.env.PORT) || 3000;
-console.log(`🚀 Server starting on http://localhost:${port}`);
 
-export default {
-  port,
-  fetch: app.fetch,
-};
+export default app;
+
+if (import.meta.main) {
+  console.log(`🚀 Server starting on http://localhost:${port}`);
+  Bun.serve({ port, fetch: app.fetch });
+}

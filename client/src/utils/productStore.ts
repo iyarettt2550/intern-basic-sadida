@@ -84,14 +84,20 @@ export function saveProductsToCache(products: Product[]): void {
 export async function loadAllProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_BASE}/api/admin/products`, {
-      headers: { 'Accept': 'application/json' },
+      headers: { Accept: 'application/json' },
     });
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      console.error(`Products API returned ${res.status} (${contentType || 'unknown type'})`);
+      return [];
+    }
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) {
       return json.data.map(mapBackendProductToProduct);
     }
+    console.error('Products API error:', json.error || json);
   } catch (err) {
-    console.info('Backend server is not running, returning empty products list');
+    console.error('Failed to load products:', err);
   }
   return [];
 }
@@ -120,12 +126,18 @@ export function saveCategoriesToCache(cats: CategoryItem[]): void {
 export async function loadAllCategories(): Promise<CategoryItem[]> {
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/categories`);
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      console.error(`Categories API returned ${res.status} (${contentType || 'unknown type'})`);
+      return [];
+    }
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) {
       return json.data;
     }
+    console.error('Categories API error:', json.error || json);
   } catch (err) {
-    console.info('Backend server is not running, returning empty categories list');
+    console.error('Failed to load categories:', err);
   }
   return [];
 }
