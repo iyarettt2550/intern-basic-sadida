@@ -21,14 +21,20 @@ app.use(
   })
 );
 
-// Health check
-app.get("/", (c) => {
+// Health check endpoints
+const healthCheck = (c: any) => {
   return c.json({
     success: true,
+    status: "ok",
     message: "Sadida Backend API is running",
     timestamp: new Date().toISOString(),
   });
-});
+};
+
+app.get("/", healthCheck);
+app.get("/health", healthCheck);
+app.get("/api", healthCheck);
+app.get("/api/health", healthCheck);
 
 // API Routes
 app.route("/api/categories", categoriesRouter);

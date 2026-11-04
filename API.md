@@ -6,11 +6,16 @@
 
 ## 1. Health Check
 
-### `GET /`
+### `GET /api/health` หรือ `GET /`
 ตรวจสอบสถานะการทำงานของเซิร์ฟเวอร์
 ```json
 // Response 200 OK
-{ "success": true, "message": "Sadida Backend API is running" }
+{
+  "success": true,
+  "status": "ok",
+  "message": "Sadida Backend API is running",
+  "timestamp": "2026-11-04T04:41:43.348Z"
+}
 ```
 
 ---

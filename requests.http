@@ -1,6 +1,10 @@
 @baseUrl = http://localhost:3000
 
 ### 1. Health Check
+GET {{baseUrl}}/api/health
+Content-Type: application/json
+
+### 1.1 Root Health Check
 GET {{baseUrl}}/
 Content-Type: application/json
 

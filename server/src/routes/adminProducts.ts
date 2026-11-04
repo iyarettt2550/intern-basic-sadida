@@ -346,7 +346,7 @@ router.post("/", async (c) => {
       proName,
       description,
       img: img || "/images/shoe_runner_1.jpg",
-      price: finalPrice,
+      price: String(finalPrice),
       categoryId,
     });
 
@@ -420,7 +420,7 @@ router.put("/:id", async (c) => {
     if (categoryId !== undefined) updateData.categoryId = categoryId;
     if (img !== undefined) updateData.img = img;
     if (price !== undefined || customPrice !== undefined) {
-      updateData.price = Number(price !== undefined ? price : customPrice) || 0;
+      updateData.price = String(Number(price !== undefined ? price : customPrice) || 0);
     }
 
     if (Object.keys(updateData).length > 0) {

@@ -26,8 +26,8 @@ CREATE TABLE "product" (
 	"pro_id" varchar(20) PRIMARY KEY NOT NULL,
 	"pro_name" varchar(50) NOT NULL,
 	"description" varchar(100) NOT NULL,	
-	"img" varchar(200) NOT NULL,
-	"price" double NOT NULL,
+	"img" text NOT NULL,
+	"price" numeric NOT NULL,
 	"category_id" varchar(10) NOT NULL	
 );
 --> statement-breakpoint

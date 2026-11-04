@@ -1,4 +1,4 @@
-import { pgTable, varchar, doublePrecision, text } from "drizzle-orm/pg-core";
+import { pgTable, varchar, doublePrecision, text, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. categories
@@ -16,16 +16,16 @@ export const productDetail = pgTable("product_detail", {
   prodetailSize: varchar("prodetail_size", { length: 10 }).notNull(),
 });
 
-// 3. product — img เก็บเป็น path ของไฟล์รูปภาพ (เช่น "/images/shoe_runner_1.jpg")
+// 3. product — img เก็บเป็น path หรือ URL ของรูปภาพ
 export const product = pgTable("product", {
   proId: varchar("pro_id", { length: 20 }).primaryKey(),
   proName: varchar("pro_name", { length: 50 }).notNull(),
   description: text("description").notNull(),
-  img: varchar("img", { length: 200 }).notNull(),
-  price: doublePrecision("price").notNull(),
+  price: numeric("price").notNull(),
   categoryId: varchar("category_id", { length: 10 })
     .notNull()
     .references(() => categories.categoryId),
+  img: text("img").notNull(),
 });
 
 // 4. contacts

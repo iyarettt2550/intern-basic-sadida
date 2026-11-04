@@ -4,9 +4,6 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// api/_entry.ts
-import { getRequestListener } from "@hono/node-server";
-
 // server/src/index.ts
 import { Hono as Hono7 } from "hono";
 import { cors } from "hono/cors";
@@ -36,7 +33,7 @@ __export(schema_exports, {
   users: () => users,
   usersRelations: () => usersRelations
 });
-import { pgTable, varchar, doublePrecision, text } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 var categories = pgTable("categories", {
   categoryId: varchar("category_id", { length: 10 }).primaryKey(),
@@ -51,9 +48,9 @@ var product = pgTable("product", {
   proId: varchar("pro_id", { length: 20 }).primaryKey(),
   proName: varchar("pro_name", { length: 50 }).notNull(),
   description: text("description").notNull(),
-  img: varchar("img", { length: 200 }).notNull(),
-  price: doublePrecision("price").notNull(),
-  categoryId: varchar("category_id", { length: 10 }).notNull().references(() => categories.categoryId)
+  price: numeric("price").notNull(),
+  categoryId: varchar("category_id", { length: 10 }).notNull().references(() => categories.categoryId),
+  img: text("img").notNull()
 });
 var contacts = pgTable("contacts", {
   contactsId: varchar("contacts_id", { length: 50 }).primaryKey(),
@@ -651,7 +648,7 @@ router5.post("/", async (c) => {
       proName,
       description,
       img: img || "/images/shoe_runner_1.jpg",
-      price: finalPrice,
+      price: String(finalPrice),
       categoryId
     });
     const allDetails = await db.select().from(productDetail);
@@ -716,7 +713,7 @@ router5.put("/:id", async (c) => {
     if (categoryId !== void 0) updateData.categoryId = categoryId;
     if (img !== void 0) updateData.img = img;
     if (price !== void 0 || customPrice !== void 0) {
-      updateData.price = Number(price !== void 0 ? price : customPrice) || 0;
+      updateData.price = String(Number(price !== void 0 ? price : customPrice) || 0);
     }
     if (Object.keys(updateData).length > 0) {
       await db.update(product).set(updateData).where(eq3(product.proId, id));
@@ -858,13 +855,18 @@ app.use(
     allowHeaders: ["Content-Type", "Authorization"]
   })
 );
-app.get("/", (c) => {
+var healthCheck = (c) => {
   return c.json({
     success: true,
+    status: "ok",
     message: "Sadida Backend API is running",
     timestamp: (/* @__PURE__ */ new Date()).toISOString()
   });
-});
+};
+app.get("/", healthCheck);
+app.get("/health", healthCheck);
+app.get("/api", healthCheck);
+app.get("/api/health", healthCheck);
 app.route("/api/categories", categories_default);
 app.route("/api/services", services_default);
 app.route("/api/products", services_default);
@@ -894,40 +896,12 @@ app.onError((err, c) => {
   );
 });
 var port = Number(process.env.PORT) || 3e3;
-var src_default = app;
+var index_default = app;
 var bunGlobal = globalThis.Bun;
 if (bunGlobal && import.meta.main) {
   console.log(`\u{1F680} Server starting on http://localhost:${port}`);
   bunGlobal.serve({ port, fetch: app.fetch });
 }
-
-// api/_entry.ts
-var config2 = {
-  runtime: "nodejs"
-};
-function handler(req, res) {
-  if (res) {
-    const matchedPath2 = req.headers?.["x-matched-path"] || req.headers?.["x-forwarded-uri"];
-    if (matchedPath2 && (req.url === "/api" || req.url === "/api/")) {
-      req.url = matchedPath2;
-    }
-    return getRequestListener(src_default.fetch)(req, res);
-  }
-  let request = req;
-  const matchedPath = req.headers?.get?.("x-matched-path") || req.headers?.get?.("x-forwarded-uri");
-  if (matchedPath) {
-    try {
-      const url = new URL(req.url);
-      if (url.pathname === "/api" || url.pathname === "/api/") {
-        url.pathname = matchedPath;
-        request = new Request(url.toString(), req);
-      }
-    } catch {
-    }
-  }
-  return src_default.fetch(request);
-}
 export {
-  config2 as config,
-  handler as default
+  index_default as default
 };
