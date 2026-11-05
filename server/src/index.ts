@@ -11,6 +11,7 @@ import authRouter from "./routes/auth";
 import adminProductsRouter from "./routes/adminProducts";
 import adminContactsRouter from "./routes/adminContacts";
 import websiteSettingsRouter from "./routes/websiteSettings";
+import { adminAuthMiddleware } from "./middlewares/auth";
 
 const app = new Hono();
 
@@ -40,8 +41,8 @@ app.get("/health", healthCheck);
 app.get("/api", healthCheck);
 app.get("/api/health", healthCheck);
 
-// File Upload Endpoint (Vercel Blob / Local fallback)
-app.post("/api/upload", async (c) => {
+// File Upload Endpoint (Vercel Blob / Local fallback) — Admin protected
+app.post("/api/upload", adminAuthMiddleware, async (c) => {
   try {
     const url = new URL(c.req.url);
     const rawFilename = url.searchParams.get("filename") || `upload_${Date.now()}.png`;

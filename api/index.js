@@ -122,10 +122,9 @@ if (!process.env.VERCEL) {
   dotenv.config({ path: ".env.local" });
   dotenv.config();
 }
-var NEON_DEFAULT_URL = "postgresql://neondb_owner:npg_f5y8DkpOTmCn@ep-fancy-bread-b3zupoaq-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
-var connectionString = process.env.DATABASE_URL || (process.env.VERCEL ? NEON_DEFAULT_URL : "postgresql://postgres:1234@localhost:5432/sadida");
+var connectionString = process.env.DATABASE_URL || (!process.env.VERCEL ? "postgresql://postgres:1234@localhost:5432/sadida" : "");
 if (!connectionString) {
-  throw new Error("DATABASE_URL is not set");
+  throw new Error("DATABASE_URL is not set. Please configure DATABASE_URL in environment variables.");
 }
 var useNeonHttp = Boolean(process.env.VERCEL) || /neon\.(tech|build)/i.test(connectionString);
 var db = useNeonHttp ? drizzleNeonHttp(neon(connectionString), { schema: schema_exports }) : drizzlePostgres(postgres(connectionString), { schema: schema_exports });
@@ -1220,7 +1219,7 @@ router7.get("/", async (c) => {
     return c.json({ success: true, data: DEFAULT_WEBSITE_CONFIG });
   }
 });
-router7.put("/", async (c) => {
+router7.put("/", adminAuthMiddleware, async (c) => {
   try {
     const body = await c.req.json();
     const { brand, pages } = body;
@@ -1289,7 +1288,7 @@ app.get("/", healthCheck);
 app.get("/health", healthCheck);
 app.get("/api", healthCheck);
 app.get("/api/health", healthCheck);
-app.post("/api/upload", async (c) => {
+app.post("/api/upload", adminAuthMiddleware, async (c) => {
   try {
     const url = new URL(c.req.url);
     const rawFilename = url.searchParams.get("filename") || `upload_${Date.now()}.png`;

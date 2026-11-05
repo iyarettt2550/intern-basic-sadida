@@ -10,15 +10,12 @@ if (!process.env.VERCEL) {
   dotenv.config();
 }
 
-const NEON_DEFAULT_URL =
-  "postgresql://neondb_owner:npg_f5y8DkpOTmCn@ep-fancy-bread-b3zupoaq-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
-
 const connectionString =
   process.env.DATABASE_URL ||
-  (process.env.VERCEL ? NEON_DEFAULT_URL : "postgresql://postgres:1234@localhost:5432/sadida");
+  (!process.env.VERCEL ? "postgresql://postgres:1234@localhost:5432/sadida" : "");
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL is not set");
+  throw new Error("DATABASE_URL is not set. Please configure DATABASE_URL in environment variables.");
 }
 
 const useNeonHttp =

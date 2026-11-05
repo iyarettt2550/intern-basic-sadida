@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { db } from "../db";
 import { websiteSettings } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { adminAuthMiddleware } from "../middlewares/auth";
 
 const router = new Hono();
 
@@ -151,8 +152,8 @@ router.get("/", async (c) => {
   }
 });
 
-// PUT /api/website-config or /api/admin/website-config — Update website configuration
-router.put("/", async (c) => {
+// PUT /api/website-config or /api/admin/website-config — Update website configuration (Admin protected)
+router.put("/", adminAuthMiddleware, async (c) => {
   try {
     const body = await c.req.json();
     const { brand, pages } = body;

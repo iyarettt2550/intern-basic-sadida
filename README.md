@@ -109,7 +109,7 @@ PORT=3000
 # ตัวอย่าง Local:
 DATABASE_URL="postgresql://postgres:1234@localhost:5432/sadida"
 # ตัวอย่าง Neon Cloud:
-# DATABASE_URL="postgresql://neondb_owner:***@ep-fancy-bread-***.aws.neon.tech/neondb?sslmode=require"
+# DATABASE_URL="postgresql://neondb_owner:***@ep-your-project-id.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
 # รหัสผ่านเริ่มต้นสำหรับบัญชี Admin (กำหนดใน Environment Variable เท่านั้น)
 ADMIN_INITIAL_PASSWORD=your_secure_admin_password
