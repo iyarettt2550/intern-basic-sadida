@@ -342,10 +342,14 @@ export const AdminProducts: React.FC = () => {
         const base64 = reader.result as string;
         try {
           const finalUrl = await uploadProductImage(base64);
+          if (finalUrl.startsWith('data:')) {
+            alert('ไม่สามารถอัปโหลดรูปภาพขึ้นคลาวด์ได้ (ระบบป้องกันการบันทึกรูป Base64 ขนาดใหญ่เพื่อไม่ให้เว็บพัง กรุณาเชื่อมต่อ Vercel Blob)');
+            return;
+          }
           setFormData((prev) => ({ ...prev, img: finalUrl }));
         } catch (uploadErr) {
-          console.error('Image upload failed, fallback to base64:', uploadErr);
-          setFormData((prev) => ({ ...prev, img: base64 }));
+          console.error('Image upload failed:', uploadErr);
+          alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
         } finally {
           setUploadingImage(false);
         }

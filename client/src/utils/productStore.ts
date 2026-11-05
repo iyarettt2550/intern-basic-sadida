@@ -185,3 +185,24 @@ export async function uploadProductImage(dataUrl: string): Promise<string> {
   }
   return dataUrl;
 }
+
+/**
+ * Upload binary file directly to Vercel Blob / server
+ */
+export async function uploadFileToBlob(file: File): Promise<string> {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const filename = `${Date.now()}_${cleanName}`;
+  const res = await fetch(`${API_BASE}/api/upload?filename=${encodeURIComponent(filename)}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to upload file to storage');
+  }
+  const blob = await res.json();
+  return blob.url;
+}

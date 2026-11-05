@@ -208,14 +208,16 @@ export const AdminWebsite: React.FC = () => {
         const rawDataUrl = readerEvent.target?.result as string;
         try {
           const uploadedUrl = await uploadProductImage(rawDataUrl);
+          if (uploadedUrl.startsWith('data:')) {
+            alert('ไม่สามารถอัปโหลดรูปภาพขึ้นคลาวด์ได้ (ระบบป้องกันการบันทึกรูป Base64 ขนาดใหญ่เพื่อไม่ให้เว็บพัง กรุณาเชื่อมต่อ Vercel Blob)');
+            return;
+          }
           updateImage(pageId, sectionId, uploadedUrl);
           setSectionUploadSuccess(`อัปโหลดรูปภาพ "${file.name}" สำหรับแบนเนอร์หลักเรียบร้อยแล้ว! อย่าลืมกดบันทึกการเปลี่ยนแปลง`);
           setTimeout(() => setSectionUploadSuccess(null), 4000);
         } catch (uploadErr) {
-          console.warn('Backend image upload failed, using dataUrl fallback', uploadErr);
-          updateImage(pageId, sectionId, rawDataUrl);
-          setSectionUploadSuccess(`อัปโหลดรูปภาพ "${file.name}" เรียบร้อยแล้ว! อย่าลืมกดบันทึกการเปลี่ยนแปลง`);
-          setTimeout(() => setSectionUploadSuccess(null), 4000);
+          console.warn('Backend image upload failed:', uploadErr);
+          alert('เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ กรุณาลองใหม่อีกครั้ง');
         } finally {
           setUploadingSectionImage(false);
         }
@@ -262,11 +264,26 @@ export const AdminWebsite: React.FC = () => {
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
           const compressedDataUrl = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.88);
-          setBrand((prev) => ({ ...prev, brandLogo: compressedDataUrl }));
-          setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+          uploadProductImage(compressedDataUrl)
+            .then((url) => {
+              setBrand((prev) => ({ ...prev, brandLogo: url }));
+              setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+            })
+            .catch(() => {
+              setBrand((prev) => ({ ...prev, brandLogo: compressedDataUrl }));
+              setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+            });
         } else {
-          setBrand((prev) => ({ ...prev, brandLogo: readerEvent.target?.result as string }));
-          setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+          const rawResult = readerEvent.target?.result as string;
+          uploadProductImage(rawResult)
+            .then((url) => {
+              setBrand((prev) => ({ ...prev, brandLogo: url }));
+              setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+            })
+            .catch(() => {
+              setBrand((prev) => ({ ...prev, brandLogo: rawResult }));
+              setLogoUploadMsg(`อัปโหลดไฟล์ "${file.name}" เรียบร้อยแล้ว`);
+            });
         }
         setTimeout(() => setLogoUploadMsg(null), 4000);
       };

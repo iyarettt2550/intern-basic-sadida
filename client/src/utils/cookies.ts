@@ -3,38 +3,49 @@
  * Handles setting, getting, and removing browser cookies with chunking support.
  */
 
-const CHUNK_SIZE = 3000;
+const MAX_SAFE_COOKIE_SIZE = 3500;
 
 /**
- * Sets a cookie with expiration in days (default: 30 days)
+ * Sets a cookie with expiration in days (default: 30 days).
+ * Prevents bloating HTTP request headers by falling back to localStorage if payload exceeds safe header limits.
  */
 export function setCookie(name: string, value: string, days = 30): void {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
   const encoded = encodeURIComponent(value);
 
-  // If payload fits comfortably inside single cookie limit
-  if (encoded.length <= CHUNK_SIZE) {
+  // If payload fits safely inside a single small cookie
+  if (encoded.length <= MAX_SAFE_COOKIE_SIZE) {
     document.cookie = `${encodeURIComponent(name)}=${encoded}; expires=${expires}; path=/; SameSite=Lax`;
     removeCookieChunks(name);
     return;
   }
 
-  // Split into chunks if payload exceeds single cookie threshold
-  const totalChunks = Math.ceil(encoded.length / CHUNK_SIZE);
-  document.cookie = `${encodeURIComponent(name)}=__chunked__:${totalChunks}; expires=${expires}; path=/; SameSite=Lax`;
-
-  for (let i = 0; i < totalChunks; i++) {
-    const chunk = encoded.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-    document.cookie = `${encodeURIComponent(name)}_${i}=${chunk}; expires=${expires}; path=/; SameSite=Lax`;
+  // Safety fallback: Large payloads (>3.5KB) are saved in localStorage
+  // to avoid Vercel 494 REQUEST_HEADER_TOO_LARGE error.
+  console.warn(`Payload for "${name}" is too large for cookies (${encoded.length} bytes). Saving to localStorage to protect request headers.`);
+  try {
+    localStorage.setItem(name, value);
+    // Remove bloated cookies
+    document.cookie = `${encodeURIComponent(name)}=__local_storage__; expires=${expires}; path=/; SameSite=Lax`;
+    removeCookieChunks(name);
+  } catch (err) {
+    console.error('Failed to save to localStorage:', err);
   }
 }
 
 /**
- * Gets a cookie by name, assembling chunks automatically if chunked.
+ * Gets a cookie by name, assembling chunks automatically if chunked,
+ * and falling back to localStorage if marked as stored in localStorage.
  */
 export function getCookie(name: string): string | null {
   const raw = getRawCookie(name);
-  if (!raw) return null;
+  if (!raw) {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(name) : null;
+  }
+
+  if (raw === '__local_storage__') {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(name) : null;
+  }
 
   if (raw.startsWith('__chunked__:')) {
     const totalChunks = parseInt(raw.replace('__chunked__:', ''), 10);
@@ -65,13 +76,34 @@ export function getCookie(name: string): string | null {
 export function removeCookie(name: string): void {
   document.cookie = `${encodeURIComponent(name)}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
   removeCookieChunks(name);
+  try {
+    localStorage.removeItem(name);
+  } catch {
+    // ignore
+  }
 }
 
 function removeCookieChunks(name: string): void {
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 50; i++) {
     const chunkName = `${name}_${i}`;
     if (getRawCookie(chunkName) !== null) {
       document.cookie = `${encodeURIComponent(chunkName)}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
+    }
+  }
+}
+
+/**
+ * Automatically purges any lingering bloated chunk cookies that cause 494 REQUEST_HEADER_TOO_LARGE
+ */
+export function cleanupBloatedCookies(): void {
+  if (typeof document === 'undefined') return;
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    const c = ca[i].trim();
+    const eqIdx = c.indexOf('=');
+    const cookieName = eqIdx > -1 ? c.slice(0, eqIdx) : c;
+    if (cookieName.startsWith('sadida_website_config_') || cookieName.startsWith('sadida_products_')) {
+      document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax`;
     }
   }
 }
@@ -115,7 +147,8 @@ export function migrateLocalStorageToCookies(): void {
   }
 }
 
-// Run migration immediately on module load
+// Run cleanup and migration immediately on module load
 if (typeof window !== 'undefined') {
+  cleanupBloatedCookies();
   migrateLocalStorageToCookies();
 }

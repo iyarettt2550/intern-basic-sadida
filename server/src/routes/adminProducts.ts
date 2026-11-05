@@ -4,6 +4,7 @@ import { db } from "../db";
 import { product, productDetail, categories } from "../db/schema";
 import path from "path";
 import { mkdir, writeFile } from "node:fs/promises";
+import { put } from "@vercel/blob";
 
 const router = new Hono();
 
@@ -175,12 +176,27 @@ router.post("/upload", async (c) => {
     const filename = `shoe_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
     const buffer = Buffer.from(matches[2], "base64");
 
-    if (process.env.VERCEL) {
+    // 1. Upload to Vercel Blob if BLOB_READ_WRITE_TOKEN is available
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`products/${filename}`, buffer, {
+        access: "public",
+      });
       return c.json({
         success: true,
-        message: "อัปโหลดรูปภาพสำเร็จ",
-        data: { url: dataUrl },
+        message: "อัปโหลดรูปภาพขึ้น Vercel Blob สำเร็จ",
+        data: { url: blob.url },
       });
+    }
+
+    // 2. If on Vercel without token
+    if (process.env.VERCEL) {
+      return c.json(
+        {
+          success: false,
+          error: "ยังไม่ได้เชื่อมต่อ Vercel Blob Store (กรุณาไปที่ Vercel Dashboard > Storage เพื่อสร้าง Blob และ Connect เข้าโปรเจกต์)",
+        },
+        500
+      );
     }
 
     const uploadDir = path.resolve(process.cwd(), "../client/public/images");

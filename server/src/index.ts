@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import path from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { put } from "@vercel/blob";
 import categoriesRouter from "./routes/categories";
 import servicesRouter from "./routes/services";
 import contactRouter from "./routes/contact";
@@ -35,6 +38,50 @@ app.get("/", healthCheck);
 app.get("/health", healthCheck);
 app.get("/api", healthCheck);
 app.get("/api/health", healthCheck);
+
+// File Upload Endpoint (Vercel Blob / Local fallback)
+app.post("/api/upload", async (c) => {
+  try {
+    const url = new URL(c.req.url);
+    const rawFilename = url.searchParams.get("filename") || `upload_${Date.now()}.png`;
+    const cleanFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const arrayBuffer = await c.req.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.length === 0) {
+      return c.json({ error: "No file content received" }, 400);
+    }
+
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(cleanFilename, buffer, {
+        access: "public",
+      });
+      return c.json(blob);
+    }
+
+    if (process.env.VERCEL) {
+      return c.json(
+        {
+          error: "ยังไม่ได้เชื่อมต่อ Vercel Blob Store (กรุณาไปที่ Vercel Dashboard > Storage เพื่อสร้าง Blob และ Connect เข้าโปรเจกต์)",
+        },
+        500
+      );
+    }
+
+    const uploadDir = path.resolve(process.cwd(), "../client/public/images");
+    const filePath = path.join(uploadDir, cleanFilename);
+    await mkdir(uploadDir, { recursive: true });
+    await writeFile(filePath, buffer);
+    return c.json({
+      url: `/images/${cleanFilename}`,
+      pathname: cleanFilename,
+      contentType: c.req.header("content-type") || "image/png",
+    });
+  } catch (err: any) {
+    console.error("Upload error:", err);
+    return c.json({ error: err.message }, 500);
+  }
+});
 
 // API Routes
 app.route("/api/categories", categoriesRouter);

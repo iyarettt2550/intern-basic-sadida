@@ -8,6 +8,9 @@ var __export = (target, all) => {
 import { Hono as Hono7 } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import path2 from "path";
+import { mkdir as mkdir2, writeFile as writeFile2 } from "node:fs/promises";
+import { put as put2 } from "@vercel/blob";
 
 // server/src/routes/categories.ts
 import { Hono } from "hono";
@@ -366,6 +369,7 @@ import { Hono as Hono5 } from "hono";
 import { eq as eq3 } from "drizzle-orm";
 import path from "path";
 import { mkdir, writeFile } from "node:fs/promises";
+import { put } from "@vercel/blob";
 var router5 = new Hono5();
 var sortSizeList = (list) => {
   return [...list].sort((a, b) => {
@@ -508,12 +512,24 @@ router5.post("/upload", async (c) => {
     if (ext === "svg+xml") ext = "svg";
     const filename = `shoe_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
     const buffer = Buffer.from(matches[2], "base64");
-    if (process.env.VERCEL) {
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`products/${filename}`, buffer, {
+        access: "public"
+      });
       return c.json({
         success: true,
-        message: "\u0E2D\u0E31\u0E1B\u0E42\u0E2B\u0E25\u0E14\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08",
-        data: { url: dataUrl }
+        message: "\u0E2D\u0E31\u0E1B\u0E42\u0E2B\u0E25\u0E14\u0E23\u0E39\u0E1B\u0E20\u0E32\u0E1E\u0E02\u0E36\u0E49\u0E19 Vercel Blob \u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08",
+        data: { url: blob.url }
       });
+    }
+    if (process.env.VERCEL) {
+      return c.json(
+        {
+          success: false,
+          error: "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E15\u0E48\u0E2D Vercel Blob Store (\u0E01\u0E23\u0E38\u0E13\u0E32\u0E44\u0E1B\u0E17\u0E35\u0E48 Vercel Dashboard > Storage \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2A\u0E23\u0E49\u0E32\u0E07 Blob \u0E41\u0E25\u0E30 Connect \u0E40\u0E02\u0E49\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)"
+        },
+        500
+      );
     }
     const uploadDir = path.resolve(process.cwd(), "../client/public/images");
     const filePath = path.join(uploadDir, filename);
@@ -867,6 +883,44 @@ app.get("/", healthCheck);
 app.get("/health", healthCheck);
 app.get("/api", healthCheck);
 app.get("/api/health", healthCheck);
+app.post("/api/upload", async (c) => {
+  try {
+    const url = new URL(c.req.url);
+    const rawFilename = url.searchParams.get("filename") || `upload_${Date.now()}.png`;
+    const cleanFilename = rawFilename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const arrayBuffer = await c.req.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (buffer.length === 0) {
+      return c.json({ error: "No file content received" }, 400);
+    }
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put2(cleanFilename, buffer, {
+        access: "public"
+      });
+      return c.json(blob);
+    }
+    if (process.env.VERCEL) {
+      return c.json(
+        {
+          error: "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E44\u0E14\u0E49\u0E40\u0E0A\u0E37\u0E48\u0E2D\u0E21\u0E15\u0E48\u0E2D Vercel Blob Store (\u0E01\u0E23\u0E38\u0E13\u0E32\u0E44\u0E1B\u0E17\u0E35\u0E48 Vercel Dashboard > Storage \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2A\u0E23\u0E49\u0E32\u0E07 Blob \u0E41\u0E25\u0E30 Connect \u0E40\u0E02\u0E49\u0E32\u0E42\u0E1B\u0E23\u0E40\u0E08\u0E01\u0E15\u0E4C)"
+        },
+        500
+      );
+    }
+    const uploadDir = path2.resolve(process.cwd(), "../client/public/images");
+    const filePath = path2.join(uploadDir, cleanFilename);
+    await mkdir2(uploadDir, { recursive: true });
+    await writeFile2(filePath, buffer);
+    return c.json({
+      url: `/images/${cleanFilename}`,
+      pathname: cleanFilename,
+      contentType: c.req.header("content-type") || "image/png"
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    return c.json({ error: err.message }, 500);
+  }
+});
 app.route("/api/categories", categories_default);
 app.route("/api/services", services_default);
 app.route("/api/products", services_default);
