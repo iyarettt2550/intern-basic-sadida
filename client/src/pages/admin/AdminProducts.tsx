@@ -12,6 +12,7 @@ import {
 import type { CategoryItem } from '../../utils/productStore';
 import { CustomDropdown } from '../../components/CustomDropdown';
 import type { DropdownOption } from '../../components/CustomDropdown';
+import { getAdminAuthHeaders } from '../../utils/cookies';
 
 interface ProductItem {
   proId: string;
@@ -125,7 +126,9 @@ export const AdminProducts: React.FC = () => {
   // Fetch all products
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/products`);
+      const res = await fetch(`${API_BASE}/api/admin/products`, {
+        headers: { ...getAdminAuthHeaders(), Accept: 'application/json' },
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setProducts(data.data);
@@ -142,7 +145,9 @@ export const AdminProducts: React.FC = () => {
   // Fetch all product details (sizes & prices)
   const fetchProductDetails = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/products/product-details/all`);
+      const res = await fetch(`${API_BASE}/api/admin/products/product-details/all`, {
+        headers: { ...getAdminAuthHeaders(), Accept: 'application/json' },
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setProductDetails(data.data);
@@ -286,7 +291,10 @@ export const AdminProducts: React.FC = () => {
 
     if (!confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่?')) return;
     try {
-      const res = await fetch(`${API_BASE}/api/admin/products/categories/${catId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/api/admin/products/categories/${catId}`, {
+        method: 'DELETE',
+        headers: { ...getAdminAuthHeaders() },
+      });
       const data = await res.json();
       if (!data.success) {
         alert(data.message || data.error || 'ไม่สามารถลบหมวดหมู่นี้ได้');
@@ -368,15 +376,25 @@ export const AdminProducts: React.FC = () => {
       alert('กรุณาติ๊กเลือกไซส์รองเท้าอย่างน้อย 1 ไซส์');
       return;
     }
+
+    const cleanName = formData.proName.trim().toLowerCase();
+    if (products.some((p) => p.proName.trim().toLowerCase() === cleanName)) {
+      alert(`ชื่อสินค้า "${formData.proName.trim()}" มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`);
+      return;
+    }
+
     setActionLoading(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/admin/products`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
+        },
         body: JSON.stringify({
           proId: formData.proId,
-          proName: formData.proName,
+          proName: formData.proName.trim(),
           description: formData.description,
           categoryId: formData.categoryId,
           img: formData.img,
@@ -408,14 +426,24 @@ export const AdminProducts: React.FC = () => {
       alert('กรุณาติ๊กเลือกไซส์รองเท้าอย่างน้อย 1 ไซส์');
       return;
     }
+
+    const cleanName = formData.proName.trim().toLowerCase();
+    if (products.some((p) => p.proName.trim().toLowerCase() === cleanName && p.proId !== formData.proId)) {
+      alert(`ชื่อสินค้า "${formData.proName.trim()}" มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`);
+      return;
+    }
+
     setActionLoading(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/admin/products/${formData.proId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
+        },
         body: JSON.stringify({
-          proName: formData.proName,
+          proName: formData.proName.trim(),
           description: formData.description,
           categoryId: formData.categoryId,
           img: formData.img,
@@ -453,6 +481,9 @@ export const AdminProducts: React.FC = () => {
     try {
       const res = await fetch(`${API_BASE}/api/admin/products/${selectedProduct.proId}`, {
         method: 'DELETE',
+        headers: {
+          ...getAdminAuthHeaders(),
+        },
       });
       const data = await res.json();
       if (data.success) {

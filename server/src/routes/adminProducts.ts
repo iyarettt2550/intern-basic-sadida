@@ -1,12 +1,18 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { db } from "../db";
 import { product, productDetail, categories } from "../db/schema";
 import path from "path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { put } from "@vercel/blob";
+import { adminAuthMiddleware } from "../middlewares/auth";
 
 const router = new Hono();
+
+// Protect mutating routes with admin authentication
+router.post("*", adminAuthMiddleware);
+router.put("*", adminAuthMiddleware);
+router.delete("*", adminAuthMiddleware);
 
 // Helper to sort shoe sizes numerically (e.g. 6.5 UK before 7 UK, 7 UK before 7.5 UK)
 const sortSizeList = (list: string[]): string[] => {
@@ -98,6 +104,19 @@ router.post("/categories", async (c) => {
     const { categoryId, categoryName } = body;
     if (!categoryName || typeof categoryName !== "string" || !categoryName.trim()) {
       return c.json({ success: false, error: "กรุณาระบุชื่อหมวดหมู่" }, 400);
+    }
+    const cleanCatName = categoryName.trim();
+    const existingCat = await db
+      .select({ categoryId: categories.categoryId })
+      .from(categories)
+      .where(ilike(categories.categoryName, cleanCatName))
+      .limit(1);
+
+    if (existingCat.length > 0) {
+      return c.json(
+        { success: false, error: `หมวดหมู่ "${cleanCatName}" มีอยู่ในระบบแล้ว` },
+        400
+      );
     }
     const all = await db.select().from(categories);
     let maxNum = 0;
@@ -340,6 +359,28 @@ router.post("/", async (c) => {
       return c.json({ success: false, error: "Missing required fields (proName, description, categoryId)" }, 400);
     }
 
+    const cleanName = String(proName).trim();
+    if (!cleanName) {
+      return c.json({ success: false, error: "กรุณาระบุชื่อสินค้า" }, 400);
+    }
+
+    // Check duplicate product name (case-insensitive)
+    const existingProd = await db
+      .select({ proId: product.proId })
+      .from(product)
+      .where(ilike(product.proName, cleanName))
+      .limit(1);
+
+    if (existingProd.length > 0) {
+      return c.json(
+        {
+          success: false,
+          error: `ชื่อสินค้า "${cleanName}" มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`,
+        },
+        400
+      );
+    }
+
     // Auto-generate proId if not provided
     let finalProId = proId?.trim();
     if (!finalProId) {
@@ -430,8 +471,29 @@ router.put("/:id", async (c) => {
       prodetailSize,
     } = body;
 
-    const updateData: Record<string, any> = {};
-    if (proName !== undefined) updateData.proName = proName;
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+    if (proName !== undefined) {
+      const cleanName = String(proName).trim();
+      if (!cleanName) {
+        return c.json({ success: false, error: "ชื่อสินค้าต้องไม่เป็นค่าว่าง" }, 400);
+      }
+      const existingProd = await db
+        .select({ proId: product.proId })
+        .from(product)
+        .where(ilike(product.proName, cleanName))
+        .limit(1);
+
+      if (existingProd.length > 0 && existingProd[0].proId !== id) {
+        return c.json(
+          {
+            success: false,
+            error: `ชื่อสินค้า "${cleanName}" มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น`,
+          },
+          400
+        );
+      }
+      updateData.proName = cleanName;
+    }
     if (description !== undefined) updateData.description = description;
     if (categoryId !== undefined) updateData.categoryId = categoryId;
     if (img !== undefined) updateData.img = img;

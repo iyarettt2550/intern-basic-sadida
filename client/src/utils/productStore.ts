@@ -1,4 +1,5 @@
 import type { Product } from '../types';
+import { getAdminAuthHeaders } from './cookies';
 
 export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
 export const PRODUCTS_UPDATED_EVENT = 'sadida_products_updated';
@@ -83,7 +84,7 @@ export function saveProductsToCache(products: Product[]): void {
  */
 export async function loadAllProducts(): Promise<Product[]> {
   try {
-    const res = await fetch(`${API_BASE}/api/admin/products`, {
+    const res = await fetch(`${API_BASE}/api/products`, {
       headers: { Accept: 'application/json' },
     });
     const contentType = res.headers.get('content-type') ?? '';
@@ -152,7 +153,10 @@ export async function createCategory(categoryName: string, customId?: string): P
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/categories`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders(),
+      },
       body: JSON.stringify(newCat),
     });
     const json = await res.json();
@@ -173,7 +177,10 @@ export async function uploadProductImage(dataUrl: string): Promise<string> {
   try {
     const res = await fetch(`${API_BASE}/api/admin/products/upload`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders(),
+      },
       body: JSON.stringify({ dataUrl }),
     });
     const json = await res.json();
@@ -196,6 +203,7 @@ export async function uploadFileToBlob(file: File): Promise<string> {
     method: 'POST',
     headers: {
       'Content-Type': file.type || 'application/octet-stream',
+      ...getAdminAuthHeaders(),
     },
     body: file,
   });

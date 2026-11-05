@@ -51,7 +51,7 @@ async function seed() {
           proName: "Sadida Zoom Runner X1",
           description: "รองเท้าวิ่งสายสปีด น้ำหนักเบาพิเศษ พื้นโฟมซับแรงกระแทก เด้งทุกก้าว",
           img: "/images/shoe_runner_1.jpg",
-          price: 1990.00,         // ฿1,990
+          price: "1990.00",         // ฿1,990
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -59,7 +59,7 @@ async function seed() {
           proName: "Sadida Pure Walk Classic",
           description: "รองเท้าเดินหนังพรีเมียมสีขาวบริสุทธิ์ นุ่มสบาย ซัพพอร์ตสรีระเท้าตลอดวัน",
           img: "/images/shoe_walker_1.jpg",
-          price: 1790.00,         // ฿1,790
+          price: "1790.00",         // ฿1,790
           categoryId: "cg_2",     // รองเท้าเดิน
         },
         {
@@ -67,7 +67,7 @@ async function seed() {
           proName: "Sadida Swift Aeroflow",
           description: "นวัตกรรมผ้าถักระบายอากาศขั้นสูง ดีไซน์สปอร์ตมินิมอลสำหรับนักวิ่งทางไกล",
           img: "/images/shoe_runner_2.jpg",
-          price: 2190.00,         // ฿2,190
+          price: "2190.00",         // ฿2,190
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -75,7 +75,7 @@ async function seed() {
           proName: "Sadida Urban Pace Leather",
           description: "รองเท้าเดินสไตล์สตรีทมินิมอล หนังแท้สีดำสนิทแมตช์ขอบขาวสุดไอคอนิก",
           img: "/images/shoe_walker_2.jpg",
-          price: 2490.00,         // ฿2,490
+          price: "2490.00",         // ฿2,490
           categoryId: "cg_2",     // รองเท้าเดิน
         },
         {
@@ -83,7 +83,7 @@ async function seed() {
           proName: "Sadida Monochrome Studio Edit",
           description: "รุ่นลิมิเต็ดจากการออกแบบในสตูดิโอ ผสานความยืดหยุ่นและการรองรับแรงกระแทก",
           img: "/images/shoe_runner_1.jpg",
-          price: 2890.00,         // ฿2,890
+          price: "2890.00",         // ฿2,890
           categoryId: "cg_1",     // รองเท้าวิ่ง
         },
         {
@@ -91,7 +91,7 @@ async function seed() {
           proName: "Sadida All-Day Commuter",
           description: "ความเรียบหรูที่ลงตัวสำหรับวันทำงานและการเดินท่องเที่ยวในเมือง",
           img: "/images/shoe_walker_1.jpg",
-          price: 1290.00,         // ฿1,290
+          price: "1290.00",         // ฿1,290
           categoryId: "cg_2",     // รองเท้าเดิน
         },
       ])

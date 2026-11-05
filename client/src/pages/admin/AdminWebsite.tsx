@@ -29,15 +29,17 @@ import {
   STORAGE_KEY,
   WEBSITE_CONFIG_EVENT,
   getSavedWebsiteFullConfig,
+  mergeWithDefaults,
   type PageConfig,
   type GlobalBrandConfig,
 } from '../../config/websiteConfig';
-import { setCookie, removeCookie } from '../../utils/cookies';
+import { setCookie, removeCookie, getAdminAuthHeaders } from '../../utils/cookies';
 import {
   getCachedProducts,
   loadAllProducts,
   PRODUCTS_UPDATED_EVENT,
   uploadProductImage,
+  API_BASE,
 } from '../../utils/productStore';
 import type { Product } from '../../types';
 
@@ -106,29 +108,78 @@ export const AdminWebsite: React.FC = () => {
     };
 
     window.addEventListener(PRODUCTS_UPDATED_EVENT, handleProductsUpdated);
+
+    // Fetch latest configuration from database
+    const fetchRemoteConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/website-config`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          const merged = mergeWithDefaults(json.data);
+          setBrand(merged.brand);
+          setPages(merged.pages);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch remote website config:', err);
+      }
+    };
+    fetchRemoteConfig();
+
     return () => window.removeEventListener(PRODUCTS_UPDATED_EVENT, handleProductsUpdated);
   }, []);
 
   const activePage = pages.find((p) => p.id === activeTab);
 
-  // Save full configuration
-  const handleSave = () => {
+  // Save full configuration to both Database and local cache
+  const handleSave = async () => {
     const fullConfig = { brand, pages };
     setCookie(STORAGE_KEY, JSON.stringify(fullConfig));
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/website-config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
+        },
+        body: JSON.stringify(fullConfig),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.warn('Failed to save to database:', data.error);
+      }
+    } catch (err) {
+      console.warn('Network error saving website config to DB:', err);
+    }
+
+    setTimeout(() => setSaved(false), 2500);
   };
 
   // Reset all to defaults
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตการตั้งค่าหน้าเว็บทั้งหมดกลับเป็นค่าเริ่มต้น?')) {
+      const defaults = { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
       setBrand(DEFAULT_BRAND);
       setPages(DEFAULT_PAGES);
       removeCookie(STORAGE_KEY);
       localStorage.removeItem(STORAGE_KEY);
       window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
+
+      try {
+        await fetch(`${API_BASE}/api/admin/website-config`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAdminAuthHeaders(),
+          },
+          body: JSON.stringify(defaults),
+        });
+      } catch (err) {
+        console.warn('Network error resetting website config on DB:', err);
+      }
     }
   };
 

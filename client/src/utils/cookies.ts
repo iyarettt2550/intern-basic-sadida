@@ -147,6 +147,21 @@ export function migrateLocalStorageToCookies(): void {
   }
 }
 
+/**
+ * Returns the current JWT admin token if present
+ */
+export function getAdminToken(): string | null {
+  return getCookie('sadida_admin_token') || (typeof localStorage !== 'undefined' ? localStorage.getItem('sadida_admin_token') : null);
+}
+
+/**
+ * Returns HTTP Authorization headers containing Bearer token for admin API calls
+ */
+export function getAdminAuthHeaders(): Record<string, string> {
+  const token = getAdminToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Run cleanup and migration immediately on module load
 if (typeof window !== 'undefined') {
   cleanupBloatedCookies();

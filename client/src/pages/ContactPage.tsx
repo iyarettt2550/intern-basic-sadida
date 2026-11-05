@@ -3,6 +3,33 @@ import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Mail, Phone, MapPin, Send, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { useWebsiteConfig } from '../config/websiteConfig';
+import { API_BASE } from '../utils/productStore';
+
+// Helper to validate Thai phone numbers and reject repetitive spam
+const isValidPhone = (val: string): boolean => {
+  const clean = val.replace(/[- ]/g, '').trim();
+  if (!/^0[2-9]\d{7,8}$/.test(clean)) return false;
+  if (/^(\d)\1+$/.test(clean)) return false;
+  if (clean === '0123456789' || clean === '0987654321' || clean === '0876543210') return false;
+  return true;
+};
+
+// Helper to validate realistic email
+const isValidEmail = (val: string): boolean => {
+  const email = val.trim().toLowerCase();
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!regex.test(email)) return false;
+  const parts = email.split('@');
+  if (parts.length !== 2) return false;
+  const domain = parts[1];
+  const domainParts = domain.split('.');
+  if (domainParts.length < 2) return false;
+  const tld = domainParts[domainParts.length - 1];
+  if (tld.length < 2) return false;
+  const fakeDomains = ['test.com', 'fake.com', 'example.com', 'asdf.com', 'a.com'];
+  if (fakeDomains.includes(domain)) return false;
+  return true;
+};
 
 export const ContactPage: React.FC = () => {
   const { isSectionVisible, getSectionText } = useWebsiteConfig();
@@ -58,28 +85,47 @@ export const ContactPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setStatus({ type: null, message: '' });
 
+    // 1. Validate Thai phone number
+    if (!isValidPhone(formData.phone)) {
+      setStatus({
+        type: 'error',
+        message: 'กรุณากรอกเบอร์โทรศัพท์จริงในประเทศไทย (เช่น 0812345678 หรือ 021234567) และห้ามใส่เลขมั่ว',
+      });
+      return;
+    }
+
+    // 2. Validate email domain
+    if (!isValidEmail(formData.email)) {
+      setStatus({
+        type: 'error',
+        message: 'กรุณากรอกอีเมลจริงที่ถูกต้อง (เช่น yourname@gmail.com, @hotmail.com, @yahoo.com)',
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // Connect to backend API endpoint /api/contact
-      const response = await fetch('/api/contact', {
+      const response = await fetch(`${API_BASE}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          subject: formData.subject,
-          message: formData.message,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone.replace(/[- ]/g, '').trim(),
+          subject: formData.subject.trim(),
+          message: formData.message.trim(),
         }),
       });
 
       const resData = await response.json().catch(() => null);
 
-      if (response.ok && resData?.success !== false) {
+      if (response.ok && resData?.success) {
         setStatus({
           type: 'success',
           message: 'ส่งข้อความติดต่อเรียบร้อยแล้ว! เจ้าหน้าที่จะติดต่อกลับโดยเร็วที่สุด',
@@ -92,24 +138,20 @@ export const ContactPage: React.FC = () => {
           message: '',
         });
       } else {
-        const errMsg = resData?.details?.[0]?.message || resData?.message || 'ส่งข้อความสำเร็จ (บันทึกในระบบเรียบร้อย)';
+        const errMsg =
+          resData?.details?.[0]?.message ||
+          resData?.error ||
+          resData?.message ||
+          'เกิดข้อผิดพลาดในการส่งข้อความ กรุณาลองใหม่อีกครั้ง';
         setStatus({
-          type: 'success',
+          type: 'error',
           message: errMsg,
         });
       }
     } catch {
-      // Fallback optimistic success for offline demonstration
       setStatus({
-        type: 'success',
-        message: 'ส่งข้อความติดต่อเรียบร้อยแล้ว (Inbox ถึงแอดมิน)',
-      });
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: '',
+        type: 'error',
+        message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง',
       });
     } finally {
       setLoading(false);

@@ -31,9 +31,14 @@ export const AdminLogin: React.FC = () => {
         return;
       }
 
-      // Store user data in Cookie (expire in 7 days)
+      // Store JWT token & user data in Cookie and localStorage (expire in 7 days)
+      if (data.token) {
+        setCookie('sadida_admin_token', data.token, 7);
+        try {
+          localStorage.setItem('sadida_admin_token', data.token);
+        } catch {}
+      }
       setCookie('sadida_admin', JSON.stringify(data.data), 7);
-      localStorage.removeItem('sadida_admin');
       navigate('/admin/dashboard');
     } catch {
       setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');

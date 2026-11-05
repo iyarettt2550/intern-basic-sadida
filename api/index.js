@@ -5,7 +5,7 @@ var __export = (target, all) => {
 };
 
 // server/src/index.ts
-import { Hono as Hono7 } from "hono";
+import { Hono as Hono8 } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import path2 from "path";
@@ -34,13 +34,14 @@ __export(schema_exports, {
   productRelations: () => productRelations,
   userRoles: () => userRoles,
   users: () => users,
-  usersRelations: () => usersRelations
+  usersRelations: () => usersRelations,
+  websiteSettings: () => websiteSettings
 });
-import { pgTable, varchar, text, numeric } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, numeric, boolean, timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 var categories = pgTable("categories", {
   categoryId: varchar("category_id", { length: 10 }).primaryKey(),
-  categoryName: varchar("category_name", { length: 50 }).notNull()
+  categoryName: varchar("category_name", { length: 50 }).notNull().unique()
 });
 var productDetail = pgTable("product_detail", {
   prodetailId: varchar("prodetail_id", { length: 12 }).primaryKey(),
@@ -53,15 +54,30 @@ var product = pgTable("product", {
   description: text("description").notNull(),
   price: numeric("price").notNull(),
   categoryId: varchar("category_id", { length: 10 }).notNull().references(() => categories.categoryId),
-  img: text("img").notNull()
+  img: text("img").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 var contacts = pgTable("contacts", {
   contactsId: varchar("contacts_id", { length: 50 }).primaryKey(),
   contactsName: varchar("contacts_name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 25 }).notNull(),
-  phone: varchar("phone", { length: 10 }).notNull(),
-  subject: varchar("subject", { length: 50 }).notNull(),
-  contactsMessage: varchar("contacts_message", { length: 200 }).notNull()
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  subject: varchar("subject", { length: 100 }).notNull(),
+  contactsMessage: text("contacts_message").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("unread"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+});
+var websiteSettings = pgTable("website_settings", {
+  id: varchar("id", { length: 50 }).primaryKey().default("default"),
+  brandName: varchar("brand_name", { length: 100 }),
+  brandTagline: varchar("brand_tagline", { length: 255 }),
+  brandLogo: text("brand_logo"),
+  footerAbout: text("footer_about"),
+  topNotice: varchar("top_notice", { length: 255 }),
+  showTopNotice: boolean("show_top_notice").default(false),
+  configJson: text("config_json").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
 });
 var userRoles = pgTable("user_roles", {
   userRolesId: varchar("user_roles_id", { length: 5 }).primaryKey(),
@@ -140,6 +156,14 @@ var categories_default = router;
 import { Hono as Hono2 } from "hono";
 import { eq } from "drizzle-orm";
 var router2 = new Hono2();
+var sortSizeList = (list) => {
+  return [...list].sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+};
 router2.get("/", async (c) => {
   try {
     const products = await db.select({
@@ -154,7 +178,7 @@ router2.get("/", async (c) => {
     const allDetails = await db.select().from(productDetail);
     const items = products.map((p) => {
       const details = allDetails.filter((d) => d.proId === p.proId);
-      const sizes = details.map((d) => d.prodetailSize);
+      const sizes = sortSizeList(details.map((d) => d.prodetailSize));
       return {
         ...p,
         prodetailId: details[0]?.prodetailId || "",
@@ -168,14 +192,46 @@ router2.get("/", async (c) => {
       data: items
     });
   } catch (error) {
+    console.error("Public products API error:", error);
     return c.json(
       {
         success: false,
-        error: "Failed to fetch services/products",
-        details: error?.message
+        error: "Failed to fetch products"
       },
       500
     );
+  }
+});
+router2.get("/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const items = await db.select({
+      proId: product.proId,
+      proName: product.proName,
+      description: product.description,
+      img: product.img,
+      price: product.price,
+      categoryId: product.categoryId,
+      categoryName: categories.categoryName
+    }).from(product).leftJoin(categories, eq(product.categoryId, categories.categoryId)).where(eq(product.proId, id)).limit(1);
+    if (items.length === 0) {
+      return c.json({ success: false, error: "Product not found" }, 404);
+    }
+    const details = await db.select().from(productDetail).where(eq(productDetail.proId, id));
+    const sizes = sortSizeList(details.map((d) => d.prodetailSize));
+    return c.json({
+      success: true,
+      data: {
+        ...items[0],
+        prodetailId: details[0]?.prodetailId || "",
+        prodetailSize: sizes[0] || "",
+        sizes,
+        details
+      }
+    });
+  } catch (error) {
+    console.error("Single product API error:", error);
+    return c.json({ success: false, error: "Failed to fetch product" }, 500);
   }
 });
 var services_default = router2;
@@ -185,12 +241,38 @@ import { Hono as Hono3 } from "hono";
 
 // server/src/validators/index.ts
 import { z } from "zod";
+var isValidPhone = (val) => {
+  const clean = val.replace(/[- ]/g, "").trim();
+  if (!/^0[2-9]\d{7,8}$/.test(clean)) return false;
+  if (/^(\d)\1+$/.test(clean)) return false;
+  if (clean === "0123456789" || clean === "0987654321" || clean === "0876543210") return false;
+  return true;
+};
+var isValidEmail = (val) => {
+  const email = val.trim().toLowerCase();
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) return false;
+  const parts = email.split("@");
+  if (parts.length !== 2) return false;
+  const domain = parts[1];
+  const domainParts = domain.split(".");
+  if (domainParts.length < 2) return false;
+  const tld = domainParts[domainParts.length - 1];
+  if (tld.length < 2) return false;
+  const fakeDomains = ["test.com", "fake.com", "example.com", "asdf.com", "a.com"];
+  if (fakeDomains.includes(domain)) return false;
+  return true;
+};
 var contactSchema = z.object({
-  name: z.string().min(1, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D").max(100, "\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B"),
-  email: z.string().email("\u0E23\u0E39\u0E1B\u0E41\u0E1A\u0E1A\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07").max(25, "\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B"),
-  phone: z.string().regex(/^[0-9]{9,10}$/, "\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23\u0E28\u0E31\u0E1E\u0E17\u0E4C\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E15\u0E31\u0E27\u0E40\u0E25\u0E02 9-10 \u0E2B\u0E25\u0E31\u0E01"),
-  subject: z.string().min(1, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D").max(50, "\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B"),
-  message: z.string().min(1, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21").max(200, "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B")
+  name: z.string().min(2, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E0A\u0E37\u0E48\u0E2D-\u0E19\u0E32\u0E21\u0E2A\u0E01\u0E38\u0E25\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 2 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23").max(100, "\u0E0A\u0E37\u0E48\u0E2D\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B"),
+  email: z.string().max(255, "\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B").refine((val) => isValidEmail(val), {
+    message: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E2D\u0E35\u0E40\u0E21\u0E25\u0E08\u0E23\u0E34\u0E07\u0E17\u0E35\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07 (\u0E40\u0E0A\u0E48\u0E19 yourname@gmail.com, @hotmail.com)"
+  }),
+  phone: z.string().refine((val) => isValidPhone(val), {
+    message: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23\u0E28\u0E31\u0E1E\u0E17\u0E4C\u0E08\u0E23\u0E34\u0E07\u0E43\u0E19\u0E1B\u0E23\u0E30\u0E40\u0E17\u0E28\u0E44\u0E17\u0E22 (\u0E40\u0E0A\u0E48\u0E19 0812345678 \u0E2B\u0E23\u0E37\u0E2D 021234567)"
+  }),
+  subject: z.string().min(2, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 2 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23").max(100, "\u0E2B\u0E31\u0E27\u0E02\u0E49\u0E2D\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B"),
+  message: z.string().min(5, "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E01\u0E23\u0E2D\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E19\u0E49\u0E2D\u0E22 5 \u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23").max(1e3, "\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E22\u0E32\u0E27\u0E40\u0E01\u0E34\u0E19\u0E44\u0E1B")
 });
 var loginSchema = z.object({
   username: z.string().optional(),
@@ -207,18 +289,18 @@ router3.post("/", async (c) => {
   try {
     const body = await c.req.json();
     const payload = {
-      name: body.name || body.contacts_name,
-      email: body.email,
-      phone: body.phone,
-      subject: body.subject,
-      message: body.message || body.contacts_message
+      name: (body.name || body.contacts_name || "").trim(),
+      email: (body.email || "").trim(),
+      phone: (body.phone || "").replace(/[- ]/g, "").trim(),
+      subject: (body.subject || "").trim(),
+      message: (body.message || body.contacts_message || "").trim()
     };
     const parsed = contactSchema.safeParse(payload);
     if (!parsed.success) {
       return c.json(
         {
           success: false,
-          error: "Validation failed",
+          error: "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
           details: parsed.error.issues.map((err) => ({
             field: err.path.join("."),
             message: err.message
@@ -228,54 +310,38 @@ router3.post("/", async (c) => {
       );
     }
     const { name, email, phone, subject, message } = parsed.data;
-    const newId = `cnt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const newId = `cnt_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     await db.insert(contacts).values({
       contactsId: newId,
       contactsName: name,
       email,
       phone,
       subject,
-      contactsMessage: message
+      contactsMessage: message,
+      status: "unread",
+      createdAt: /* @__PURE__ */ new Date()
     });
     return c.json(
       {
         success: true,
-        message: "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27",
+        message: "\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27 \u0E40\u0E08\u0E49\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E17\u0E35\u0E48\u0E08\u0E30\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E01\u0E25\u0E31\u0E1A\u0E42\u0E14\u0E22\u0E40\u0E23\u0E47\u0E27",
         data: {
           contactsId: newId,
           contactsName: name,
           email,
           phone,
           subject,
-          contactsMessage: message
+          status: "unread"
         }
       },
       201
     );
   } catch (error) {
+    console.error("Contact submission error:", error);
     return c.json(
       {
         success: false,
-        error: "Internal Server Error",
-        details: error?.message
-      },
-      500
-    );
-  }
-});
-router3.get("/", async (c) => {
-  try {
-    const list = await db.select().from(contacts);
-    return c.json({
-      success: true,
-      data: list
-    });
-  } catch (error) {
-    return c.json(
-      {
-        success: false,
-        error: "Failed to fetch contact messages",
-        details: error?.message
+        error: "\u0E44\u0E21\u0E48\u0E2A\u0E32\u0E21\u0E32\u0E23\u0E16\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E44\u0E14\u0E49 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07"
       },
       500
     );
@@ -285,8 +351,73 @@ var contact_default = router3;
 
 // server/src/routes/auth.ts
 import { Hono as Hono4 } from "hono";
-import { eq as eq2, or, ilike } from "drizzle-orm";
+import { eq as eq2, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+
+// server/src/middlewares/auth.ts
+import { createMiddleware } from "hono/factory";
+import { verify, sign } from "hono/jwt";
+var JWT_SECRET = process.env.JWT_SECRET || "sadida-secret-key-2026-production-token";
+async function generateAdminToken(user) {
+  const payload = {
+    usersId: user.usersId,
+    usersName: user.usersName,
+    phone: user.phone,
+    role: user.role || "Admin",
+    // Token expires in 7 days
+    exp: Math.floor(Date.now() / 1e3) + 60 * 60 * 24 * 7
+  };
+  return await sign(payload, JWT_SECRET, "HS256");
+}
+var adminAuthMiddleware = createMiddleware(async (c, next) => {
+  const authHeader = c.req.header("Authorization");
+  const cookieHeader = c.req.header("Cookie") || "";
+  let token = "";
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.substring(7).trim();
+  } else {
+    const match = cookieHeader.match(/sadida_admin_token=([^;]+)/);
+    if (match) {
+      token = decodeURIComponent(match[1]).trim();
+    }
+  }
+  if (!token) {
+    return c.json(
+      {
+        success: false,
+        error: "Unauthorized",
+        message: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E01\u0E48\u0E2D\u0E19\u0E14\u0E33\u0E40\u0E19\u0E34\u0E19\u0E01\u0E32\u0E23 (Missing admin token)"
+      },
+      401
+    );
+  }
+  try {
+    const payload = await verify(token, JWT_SECRET, "HS256");
+    if (!payload || !payload.usersId) {
+      return c.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          message: "Token \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E2B\u0E23\u0E37\u0E2D\u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38"
+        },
+        401
+      );
+    }
+    c.set("adminUser", payload);
+    await next();
+  } catch {
+    return c.json(
+      {
+        success: false,
+        error: "Unauthorized",
+        message: "Token \u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07\u0E2B\u0E23\u0E37\u0E2D\u0E2B\u0E21\u0E14\u0E2D\u0E32\u0E22\u0E38 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E43\u0E2B\u0E21\u0E48"
+      },
+      401
+    );
+  }
+});
+
+// server/src/routes/auth.ts
 var router4 = new Hono4();
 router4.post("/login", async (c) => {
   try {
@@ -296,7 +427,7 @@ router4.post("/login", async (c) => {
       return c.json(
         {
           success: false,
-          error: "Validation failed",
+          error: "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07",
           details: parsed.error.issues.map((err) => ({
             field: err.path.join("."),
             message: err.message
@@ -306,9 +437,12 @@ router4.post("/login", async (c) => {
       );
     }
     const { password } = parsed.data;
-    const username = parsed.data.username || parsed.data.userName;
-    const phone = parsed.data.phone;
-    const condition = username && phone ? or(eq2(users.usersName, username), eq2(users.phone, phone)) : username ? or(eq2(users.usersName, username), ilike(users.usersName, username)) : eq2(users.phone, phone);
+    const rawUsername = (parsed.data.username || parsed.data.userName || "").trim();
+    const rawPhone = (parsed.data.phone || "").trim();
+    if (!rawUsername && !rawPhone) {
+      return c.json({ success: false, error: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E2B\u0E23\u0E37\u0E2D\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23\u0E28\u0E31\u0E1E\u0E17\u0E4C" }, 400);
+    }
+    const condition = rawUsername && rawPhone ? or(eq2(users.usersName, rawUsername), eq2(users.phone, rawPhone)) : rawUsername ? eq2(users.usersName, rawUsername) : eq2(users.phone, rawPhone);
     const user = await db.select({
       usersId: users.usersId,
       usersName: users.usersName,
@@ -319,7 +453,7 @@ router4.post("/login", async (c) => {
     }).from(users).leftJoin(userRoles, eq2(users.userRolesId, userRoles.userRolesId)).where(condition).limit(1);
     if (user.length === 0) {
       return c.json(
-        { success: false, error: "\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 \u0E2B\u0E23\u0E37\u0E2D \u0E23\u0E2B\u0E31\u0E2A\u0E1C\u0E48\u0E32\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07" },
+        { success: false, error: "\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49 \u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23\u0E28\u0E31\u0E1E\u0E17\u0E4C \u0E2B\u0E23\u0E37\u0E2D\u0E23\u0E2B\u0E31\u0E2A\u0E1C\u0E48\u0E32\u0E19\u0E44\u0E21\u0E48\u0E16\u0E39\u0E01\u0E15\u0E49\u0E2D\u0E07" },
         401
       );
     }
@@ -338,9 +472,16 @@ router4.post("/login", async (c) => {
         403
       );
     }
+    const token = await generateAdminToken({
+      usersId: foundUser.usersId,
+      usersName: foundUser.usersName,
+      phone: foundUser.phone,
+      role: foundUser.roleName || "Admin"
+    });
     return c.json({
       success: true,
       message: "\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08",
+      token,
       data: {
         usersId: foundUser.usersId,
         usersName: foundUser.usersName,
@@ -349,29 +490,36 @@ router4.post("/login", async (c) => {
       }
     });
   } catch (error) {
+    console.error("Login error:", error);
     return c.json(
       {
         success: false,
-        error: "Internal Server Error",
-        details: error?.message
+        error: "\u0E40\u0E02\u0E49\u0E32\u0E2A\u0E39\u0E48\u0E23\u0E30\u0E1A\u0E1A\u0E44\u0E21\u0E48\u0E2A\u0E33\u0E40\u0E23\u0E47\u0E08 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E25\u0E2D\u0E07\u0E43\u0E2B\u0E21\u0E48\u0E2D\u0E35\u0E01\u0E04\u0E23\u0E31\u0E49\u0E07"
       },
       500
     );
   }
 });
-router4.get("/me", async (c) => {
-  return c.json({ success: false, error: "Not authenticated" }, 401);
+router4.get("/me", adminAuthMiddleware, async (c) => {
+  const adminUser = c.get("adminUser");
+  return c.json({
+    success: true,
+    data: adminUser
+  });
 });
 var auth_default = router4;
 
 // server/src/routes/adminProducts.ts
 import { Hono as Hono5 } from "hono";
-import { eq as eq3 } from "drizzle-orm";
+import { eq as eq3, ilike } from "drizzle-orm";
 import path from "path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { put } from "@vercel/blob";
 var router5 = new Hono5();
-var sortSizeList = (list) => {
+router5.post("*", adminAuthMiddleware);
+router5.put("*", adminAuthMiddleware);
+router5.delete("*", adminAuthMiddleware);
+var sortSizeList2 = (list) => {
   return [...list].sort((a, b) => {
     const numA = parseFloat(a);
     const numB = parseFloat(b);
@@ -393,7 +541,7 @@ router5.get("/", async (c) => {
     const allDetails = await db.select().from(productDetail);
     const items = products.map((p) => {
       const details = allDetails.filter((d) => d.proId === p.proId);
-      const sizes = sortSizeList(details.map((d) => d.prodetailSize));
+      const sizes = sortSizeList2(details.map((d) => d.prodetailSize));
       return {
         ...p,
         prodetailId: details[0]?.prodetailId || "",
@@ -446,6 +594,14 @@ router5.post("/categories", async (c) => {
     const { categoryId, categoryName } = body;
     if (!categoryName || typeof categoryName !== "string" || !categoryName.trim()) {
       return c.json({ success: false, error: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D\u0E2B\u0E21\u0E27\u0E14\u0E2B\u0E21\u0E39\u0E48" }, 400);
+    }
+    const cleanCatName = categoryName.trim();
+    const existingCat = await db.select({ categoryId: categories.categoryId }).from(categories).where(ilike(categories.categoryName, cleanCatName)).limit(1);
+    if (existingCat.length > 0) {
+      return c.json(
+        { success: false, error: `\u0E2B\u0E21\u0E27\u0E14\u0E2B\u0E21\u0E39\u0E48 "${cleanCatName}" \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E25\u0E49\u0E27` },
+        400
+      );
     }
     const all = await db.select().from(categories);
     let maxNum = 0;
@@ -609,7 +765,7 @@ router5.get("/:id", async (c) => {
       return c.json({ success: false, error: "Product not found" }, 404);
     }
     const details = await db.select().from(productDetail).where(eq3(productDetail.proId, id));
-    const sizes = sortSizeList(details.map((d) => d.prodetailSize));
+    const sizes = sortSizeList2(details.map((d) => d.prodetailSize));
     return c.json({
       success: true,
       data: {
@@ -644,6 +800,20 @@ router5.post("/", async (c) => {
     } = body;
     if (!proName || !description || !categoryId) {
       return c.json({ success: false, error: "Missing required fields (proName, description, categoryId)" }, 400);
+    }
+    const cleanName = String(proName).trim();
+    if (!cleanName) {
+      return c.json({ success: false, error: "\u0E01\u0E23\u0E38\u0E13\u0E32\u0E23\u0E30\u0E1A\u0E38\u0E0A\u0E37\u0E48\u0E2D\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32" }, 400);
+    }
+    const existingProd = await db.select({ proId: product.proId }).from(product).where(ilike(product.proName, cleanName)).limit(1);
+    if (existingProd.length > 0) {
+      return c.json(
+        {
+          success: false,
+          error: `\u0E0A\u0E37\u0E48\u0E2D\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32 "${cleanName}" \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E25\u0E49\u0E27 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E0A\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E2D\u0E37\u0E48\u0E19`
+        },
+        400
+      );
     }
     let finalProId = proId?.trim();
     if (!finalProId) {
@@ -685,7 +855,7 @@ router5.post("/", async (c) => {
     } else if (prodetailSize) {
       sizesToInsert.push(prodetailSize);
     }
-    const sortedSizesToInsert = sortSizeList(sizesToInsert);
+    const sortedSizesToInsert = sortSizeList2(sizesToInsert);
     for (const s of sortedSizesToInsert) {
       const rawSize = String(s).trim();
       if (!rawSize) continue;
@@ -723,8 +893,24 @@ router5.put("/:id", async (c) => {
       size,
       prodetailSize
     } = body;
-    const updateData = {};
-    if (proName !== void 0) updateData.proName = proName;
+    const updateData = { updatedAt: /* @__PURE__ */ new Date() };
+    if (proName !== void 0) {
+      const cleanName = String(proName).trim();
+      if (!cleanName) {
+        return c.json({ success: false, error: "\u0E0A\u0E37\u0E48\u0E2D\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32\u0E15\u0E49\u0E2D\u0E07\u0E44\u0E21\u0E48\u0E40\u0E1B\u0E47\u0E19\u0E04\u0E48\u0E32\u0E27\u0E48\u0E32\u0E07" }, 400);
+      }
+      const existingProd = await db.select({ proId: product.proId }).from(product).where(ilike(product.proName, cleanName)).limit(1);
+      if (existingProd.length > 0 && existingProd[0].proId !== id) {
+        return c.json(
+          {
+            success: false,
+            error: `\u0E0A\u0E37\u0E48\u0E2D\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32 "${cleanName}" \u0E21\u0E35\u0E2D\u0E22\u0E39\u0E48\u0E43\u0E19\u0E23\u0E30\u0E1A\u0E1A\u0E41\u0E25\u0E49\u0E27 \u0E01\u0E23\u0E38\u0E13\u0E32\u0E43\u0E0A\u0E49\u0E0A\u0E37\u0E48\u0E2D\u0E2D\u0E37\u0E48\u0E19`
+          },
+          400
+        );
+      }
+      updateData.proName = cleanName;
+    }
     if (description !== void 0) updateData.description = description;
     if (categoryId !== void 0) updateData.categoryId = categoryId;
     if (img !== void 0) updateData.img = img;
@@ -743,7 +929,7 @@ router5.put("/:id", async (c) => {
       sizesToUpdate.push(prodetailSize);
     }
     if (sizesToUpdate.length > 0) {
-      const sortedSizesToUpdate = sortSizeList(sizesToUpdate);
+      const sortedSizesToUpdate = sortSizeList2(sizesToUpdate);
       await db.delete(productDetail).where(eq3(productDetail.proId, id));
       const allDetails = await db.select().from(productDetail);
       let maxDetailNum = 0;
@@ -800,15 +986,42 @@ var adminProducts_default = router5;
 
 // server/src/routes/adminContacts.ts
 import { Hono as Hono6 } from "hono";
-import { eq as eq4 } from "drizzle-orm";
+import { eq as eq4, desc } from "drizzle-orm";
 var router6 = new Hono6();
+router6.use("*", adminAuthMiddleware);
+router6.get("/stats/summary", async (c) => {
+  try {
+    const all = await db.select({
+      contactsId: contacts.contactsId,
+      status: contacts.status
+    }).from(contacts);
+    const totalContacts = all.length;
+    const unreadContacts = all.filter((item) => (item.status || "unread") === "unread").length;
+    const readContacts = totalContacts - unreadContacts;
+    return c.json({
+      success: true,
+      data: {
+        totalContacts,
+        unreadContacts,
+        readContacts
+      }
+    });
+  } catch (error) {
+    console.error("Failed to fetch contact stats:", error);
+    return c.json(
+      { success: false, error: "Failed to fetch contact statistics" },
+      500
+    );
+  }
+});
 router6.get("/", async (c) => {
   try {
-    const list = await db.select().from(contacts);
+    const list = await db.select().from(contacts).orderBy(desc(contacts.createdAt));
     return c.json({ success: true, data: list });
   } catch (error) {
+    console.error("Failed to fetch contacts:", error);
     return c.json(
-      { success: false, error: "Failed to fetch contacts", details: error?.message },
+      { success: false, error: "Failed to fetch contacts" },
       500
     );
   }
@@ -820,10 +1033,32 @@ router6.get("/:id", async (c) => {
     if (items.length === 0) {
       return c.json({ success: false, error: "Contact not found" }, 404);
     }
+    if (items[0].status === "unread") {
+      await db.update(contacts).set({ status: "read" }).where(eq4(contacts.contactsId, id));
+      items[0].status = "read";
+    }
     return c.json({ success: true, data: items[0] });
   } catch (error) {
+    console.error("Failed to fetch contact:", error);
     return c.json(
-      { success: false, error: "Failed to fetch contact", details: error?.message },
+      { success: false, error: "Failed to fetch contact detail" },
+      500
+    );
+  }
+});
+router6.patch("/:id/read", async (c) => {
+  try {
+    const id = c.req.param("id");
+    await db.update(contacts).set({ status: "read" }).where(eq4(contacts.contactsId, id));
+    return c.json({
+      success: true,
+      message: "\u0E17\u0E33\u0E40\u0E04\u0E23\u0E37\u0E48\u0E2D\u0E07\u0E2B\u0E21\u0E32\u0E22\u0E27\u0E48\u0E32\u0E2D\u0E48\u0E32\u0E19\u0E41\u0E25\u0E49\u0E27\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22",
+      data: { contactsId: id, status: "read" }
+    });
+  } catch (error) {
+    console.error("Failed to mark contact as read:", error);
+    return c.json(
+      { success: false, error: "Failed to update contact status" },
       500
     );
   }
@@ -838,30 +1073,201 @@ router6.delete("/:id", async (c) => {
       data: { contactsId: id }
     });
   } catch (error) {
+    console.error("Failed to delete contact:", error);
     return c.json(
-      { success: false, error: "Failed to delete contact", details: error?.message },
-      500
-    );
-  }
-});
-router6.get("/stats/summary", async (c) => {
-  try {
-    const allContacts = await db.select({ contactsId: contacts.contactsId }).from(contacts);
-    return c.json({
-      success: true,
-      data: { totalContacts: allContacts.length }
-    });
-  } catch (error) {
-    return c.json(
-      { success: false, error: "Failed to fetch stats", details: error?.message },
+      { success: false, error: "Failed to delete contact" },
       500
     );
   }
 });
 var adminContacts_default = router6;
 
+// server/src/routes/websiteSettings.ts
+import { Hono as Hono7 } from "hono";
+import { eq as eq5 } from "drizzle-orm";
+var router7 = new Hono7();
+var DEFAULT_WEBSITE_CONFIG = {
+  brand: {
+    brandName: "SADIDA",
+    brandTagline: "FOOTWEAR \u2022 BLACK & WHITE",
+    brandLogo: "/logo.jpg",
+    footerAbout: "Sadida \u0E41\u0E1A\u0E23\u0E19\u0E14\u0E4C\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E27\u0E34\u0E48\u0E07\u0E41\u0E25\u0E30\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E40\u0E14\u0E34\u0E19\u0E17\u0E35\u0E48\u0E04\u0E31\u0E14\u0E2A\u0E23\u0E23\u0E27\u0E31\u0E2A\u0E14\u0E38\u0E1E\u0E23\u0E35\u0E40\u0E21\u0E35\u0E22\u0E21 \u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E19\u0E49\u0E33\u0E2B\u0E19\u0E31\u0E01\u0E40\u0E1A\u0E32 \u0E41\u0E25\u0E30\u0E40\u0E2D\u0E01\u0E25\u0E31\u0E01\u0E29\u0E13\u0E4C\u0E42\u0E17\u0E19\u0E2A\u0E35\u0E14\u0E33\u0E01\u0E31\u0E1A\u0E2A\u0E35\u0E02\u0E32\u0E27 \u0E2A\u0E44\u0E15\u0E25\u0E4C\u0E21\u0E34\u0E19\u0E34\u0E21\u0E2D\u0E25\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E01\u0E32\u0E25\u0E40\u0E27\u0E25\u0E32",
+    topNotice: "\u{1F525} \u0E04\u0E2D\u0E25\u0E40\u0E25\u0E01\u0E0A\u0E31\u0E19\u0E43\u0E2B\u0E21\u0E48 SADIDA 2026 \u0E1E\u0E23\u0E49\u0E2D\u0E21\u0E40\u0E1B\u0E34\u0E14\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E17\u0E32\u0E07\u0E01\u0E32\u0E23\u0E41\u0E25\u0E49\u0E27",
+    showTopNotice: false
+  },
+  pages: [
+    {
+      id: "home",
+      name: "\u0E2B\u0E19\u0E49\u0E32\u0E2B\u0E25\u0E31\u0E01 (Brand Home)",
+      route: "/",
+      sections: [
+        {
+          id: "hero",
+          name: "\u0E41\u0E1A\u0E19\u0E40\u0E19\u0E2D\u0E23\u0E4C\u0E2B\u0E25\u0E31\u0E01 (Hero Banner)",
+          visible: true,
+          image: "/images/hero_sketch.jpg",
+          texts: {
+            headline: "CRAFTED FOR PURE MOTION.",
+            subtitle: "\u0E08\u0E32\u0E01\u0E20\u0E32\u0E1E\u0E23\u0E48\u0E32\u0E07\u0E2A\u0E40\u0E01\u0E47\u0E15\u0E0A\u0E4C\u0E43\u0E19\u0E2A\u0E15\u0E39\u0E14\u0E34\u0E42\u0E2D \u0E2A\u0E39\u0E48\u0E19\u0E27\u0E31\u0E15\u0E01\u0E23\u0E23\u0E21\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E27\u0E34\u0E48\u0E07\u0E41\u0E25\u0E30\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E40\u0E14\u0E34\u0E19\u0E17\u0E35\u0E48\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E2B\u0E23\u0E39\u0E40\u0E2B\u0E19\u0E37\u0E2D\u0E01\u0E32\u0E25\u0E40\u0E27\u0E25\u0E32",
+            badge: "Sadida Concept Atelier"
+          }
+        },
+        {
+          id: "products",
+          name: "\u0E41\u0E16\u0E1A\u0E40\u0E25\u0E37\u0E48\u0E2D\u0E19\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32 (Product Carousel)",
+          visible: true,
+          selectedProductIds: ["pro_001", "pro_002", "pro_003", "pro_004", "pro_005", "pro_006"],
+          texts: {
+            title: "\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32\u0E02\u0E2D\u0E07\u0E41\u0E1A\u0E23\u0E19\u0E14\u0E4C SADIDA",
+            subtitle: "\u0E40\u0E25\u0E37\u0E2D\u0E01\u0E0A\u0E49\u0E2D\u0E1B\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E04\u0E38\u0E13\u0E20\u0E32\u0E1E\u0E2A\u0E39\u0E07 \u0E41\u0E1A\u0E48\u0E07\u0E2D\u0E2D\u0E01\u0E40\u0E1B\u0E47\u0E19 2 \u0E1B\u0E23\u0E30\u0E40\u0E20\u0E17\u0E2B\u0E25\u0E31\u0E01 \u0E44\u0E14\u0E49\u0E41\u0E01\u0E48 \u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E27\u0E34\u0E48\u0E07 \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E40\u0E23\u0E47\u0E27 \u0E41\u0E25\u0E30 \u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32\u0E40\u0E14\u0E34\u0E19 \u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E04\u0E27\u0E32\u0E21\u0E2A\u0E1A\u0E32\u0E22\u0E17\u0E38\u0E01\u0E27\u0E31\u0E19",
+            badge: "Sadida Collection 2026"
+          }
+        },
+        {
+          id: "brand",
+          name: "\u0E1B\u0E23\u0E31\u0E0A\u0E0D\u0E32\u0E41\u0E1A\u0E23\u0E19\u0E14\u0E4C (Brand Story)",
+          visible: true,
+          texts: {
+            title: "\u0E17\u0E33\u0E44\u0E21\u0E15\u0E49\u0E2D\u0E07\u0E40\u0E1B\u0E47\u0E19\u0E42\u0E17\u0E19\u0E2A\u0E35\u0E14\u0E33\u0E01\u0E31\u0E1A\u0E2A\u0E35\u0E02\u0E32\u0E27 \u0E02\u0E2D\u0E07 SADIDA?",
+            description: "\u0E40\u0E23\u0E32\u0E15\u0E31\u0E14\u0E17\u0E2D\u0E19\u0E2A\u0E35\u0E2A\u0E31\u0E19\u0E17\u0E35\u0E48\u0E44\u0E21\u0E48\u0E08\u0E33\u0E40\u0E1B\u0E47\u0E19\u0E2D\u0E2D\u0E01 \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E2B\u0E49\u0E04\u0E38\u0E13\u0E2A\u0E31\u0E21\u0E1C\u0E31\u0E2A\u0E01\u0E31\u0E1A\u0E42\u0E04\u0E23\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E17\u0E35\u0E48\u0E41\u0E17\u0E49\u0E08\u0E23\u0E34\u0E07\u0E02\u0E2D\u0E07\u0E23\u0E2D\u0E07\u0E40\u0E17\u0E49\u0E32"
+          }
+        }
+      ]
+    },
+    {
+      id: "products",
+      name: "\u0E2B\u0E19\u0E49\u0E32\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32 (Store)",
+      route: "/products",
+      sections: [
+        {
+          id: "sidebar",
+          name: "\u0E41\u0E16\u0E1A\u0E01\u0E23\u0E2D\u0E07 (Filter Sidebar)",
+          visible: true,
+          texts: {
+            title: "Navbar Menu"
+          }
+        },
+        {
+          id: "productGrid",
+          name: "\u0E15\u0E32\u0E23\u0E32\u0E07\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32 (Product Grid)",
+          visible: true,
+          texts: {
+            title: "\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32\u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14 (PRODUCTS)",
+            emptyMessage: "\u0E44\u0E21\u0E48\u0E1E\u0E1A\u0E2A\u0E34\u0E19\u0E04\u0E49\u0E32\u0E17\u0E35\u0E48\u0E15\u0E23\u0E07\u0E01\u0E31\u0E1A\u0E40\u0E07\u0E37\u0E48\u0E2D\u0E19\u0E44\u0E02"
+          }
+        }
+      ]
+    },
+    {
+      id: "contact",
+      name: "\u0E2B\u0E19\u0E49\u0E32\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E40\u0E23\u0E32 (Contact)",
+      route: "/contact",
+      sections: [
+        {
+          id: "contactForm",
+          name: "\u0E1F\u0E2D\u0E23\u0E4C\u0E21\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E40\u0E23\u0E32 (Contact Form)",
+          visible: true,
+          texts: {
+            title: "\u0E15\u0E34\u0E14\u0E15\u0E48\u0E2D\u0E40\u0E23\u0E32",
+            description: "\u0E2A\u0E48\u0E07\u0E02\u0E49\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E16\u0E36\u0E07\u0E17\u0E35\u0E21\u0E07\u0E32\u0E19 Sadida",
+            buttonText: "\u0E2A\u0E48\u0E07"
+          }
+        },
+        {
+          id: "contactInfo",
+          name: "\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48\u0E41\u0E25\u0E30\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48 (Address & Map)",
+          visible: true,
+          texts: {
+            title: "\u0E23\u0E32\u0E22\u0E25\u0E30\u0E40\u0E2D\u0E35\u0E22\u0E14\u0E17\u0E35\u0E48\u0E2D\u0E22\u0E39\u0E48",
+            address: "Sadida Flagship Atelier & Store 99/4 \u0E2D\u0E32\u0E04\u0E32\u0E23\u0E19\u0E27\u0E31\u0E15\u0E01\u0E23\u0E23\u0E21\u0E14\u0E35\u0E44\u0E0B\u0E19\u0E4C \u0E0A\u0E31\u0E49\u0E19 1 \u0E41\u0E02\u0E27\u0E07\u0E04\u0E25\u0E2D\u0E07\u0E40\u0E15\u0E22\u0E40\u0E2B\u0E19\u0E37\u0E2D \u0E40\u0E02\u0E15\u0E27\u0E31\u0E12\u0E19\u0E32 \u0E01\u0E23\u0E38\u0E07\u0E40\u0E17\u0E1E\u0E2F 10110",
+            phone: "081-234-5678",
+            email: "contact@sadida.co.th",
+            mapTitle: "map (\u0E41\u0E1C\u0E19\u0E17\u0E35\u0E48\u0E15\u0E31\u0E49\u0E07)",
+            mapLat: "13.7380",
+            mapLng: "100.5630",
+            mapZoom: "15",
+            googleMapsApiKey: ""
+          }
+        }
+      ]
+    }
+  ]
+};
+router7.get("/", async (c) => {
+  try {
+    const rows = await db.select().from(websiteSettings).where(eq5(websiteSettings.id, "default")).limit(1);
+    if (rows.length === 0 || !rows[0].configJson) {
+      try {
+        await db.insert(websiteSettings).values({
+          id: "default",
+          brandName: DEFAULT_WEBSITE_CONFIG.brand.brandName,
+          brandTagline: DEFAULT_WEBSITE_CONFIG.brand.brandTagline,
+          brandLogo: DEFAULT_WEBSITE_CONFIG.brand.brandLogo,
+          footerAbout: DEFAULT_WEBSITE_CONFIG.brand.footerAbout,
+          topNotice: DEFAULT_WEBSITE_CONFIG.brand.topNotice,
+          showTopNotice: DEFAULT_WEBSITE_CONFIG.brand.showTopNotice,
+          configJson: JSON.stringify(DEFAULT_WEBSITE_CONFIG),
+          updatedAt: /* @__PURE__ */ new Date()
+        });
+      } catch {
+      }
+      return c.json({ success: true, data: DEFAULT_WEBSITE_CONFIG });
+    }
+    const parsed = JSON.parse(rows[0].configJson);
+    return c.json({ success: true, data: parsed });
+  } catch (err) {
+    console.error("Failed to fetch website config from DB:", err);
+    return c.json({ success: true, data: DEFAULT_WEBSITE_CONFIG });
+  }
+});
+router7.put("/", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { brand, pages } = body;
+    if (!brand || !Array.isArray(pages)) {
+      return c.json({ success: false, error: "Invalid configuration format (brand and pages required)" }, 400);
+    }
+    const fullConfig = { brand, pages };
+    const configString = JSON.stringify(fullConfig);
+    const existing = await db.select({ id: websiteSettings.id }).from(websiteSettings).where(eq5(websiteSettings.id, "default")).limit(1);
+    if (existing.length > 0) {
+      await db.update(websiteSettings).set({
+        brandName: brand.brandName || "SADIDA",
+        brandTagline: brand.brandTagline || "",
+        brandLogo: brand.brandLogo || "/logo.jpg",
+        footerAbout: brand.footerAbout || "",
+        topNotice: brand.topNotice || "",
+        showTopNotice: Boolean(brand.showTopNotice),
+        configJson: configString,
+        updatedAt: /* @__PURE__ */ new Date()
+      }).where(eq5(websiteSettings.id, "default"));
+    } else {
+      await db.insert(websiteSettings).values({
+        id: "default",
+        brandName: brand.brandName || "SADIDA",
+        brandTagline: brand.brandTagline || "",
+        brandLogo: brand.brandLogo || "/logo.jpg",
+        footerAbout: brand.footerAbout || "",
+        topNotice: brand.topNotice || "",
+        showTopNotice: Boolean(brand.showTopNotice),
+        configJson: configString,
+        updatedAt: /* @__PURE__ */ new Date()
+      });
+    }
+    return c.json({
+      success: true,
+      message: "\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E01\u0E32\u0E23\u0E15\u0E31\u0E49\u0E07\u0E04\u0E48\u0E32\u0E2B\u0E19\u0E49\u0E32\u0E40\u0E27\u0E47\u0E1A\u0E25\u0E07\u0E10\u0E32\u0E19\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E40\u0E23\u0E35\u0E22\u0E1A\u0E23\u0E49\u0E2D\u0E22\u0E41\u0E25\u0E49\u0E27",
+      data: fullConfig
+    });
+  } catch (err) {
+    console.error("Failed to save website config:", err);
+    return c.json({ success: false, error: "Failed to save website configuration", details: err?.message }, 500);
+  }
+});
+var websiteSettings_default = router7;
+
 // server/src/index.ts
-var app = new Hono7();
+var app = new Hono8();
 app.use("*", logger());
 app.use(
   "*",
@@ -928,6 +1334,8 @@ app.route("/api/contact", contact_default);
 app.route("/api/auth", auth_default);
 app.route("/api/admin/products", adminProducts_default);
 app.route("/api/admin/contacts", adminContacts_default);
+app.route("/api/website-config", websiteSettings_default);
+app.route("/api/admin/website-config", websiteSettings_default);
 app.notFound((c) => {
   return c.json(
     {

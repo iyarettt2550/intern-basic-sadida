@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, MessageSquare, Layers, TrendingUp, Clock } from 'lucide-react';
 import { API_BASE } from '../../utils/productStore';
+import { getAdminAuthHeaders } from '../../utils/cookies';
 
 interface ContactItem {
   contactsId: string;
@@ -27,11 +28,12 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        const headers = { ...getAdminAuthHeaders(), Accept: 'application/json' };
         const [prodRes, catRes, contRes, contactsListRes] = await Promise.all([
-          fetch(`${API_BASE}/api/admin/products/stats/summary`),
-          fetch(`${API_BASE}/api/admin/products/categories`),
-          fetch(`${API_BASE}/api/admin/contacts/stats/summary`),
-          fetch(`${API_BASE}/api/admin/contacts`),
+          fetch(`${API_BASE}/api/admin/products/stats/summary`, { headers }),
+          fetch(`${API_BASE}/api/admin/products/categories`, { headers }),
+          fetch(`${API_BASE}/api/admin/contacts/stats/summary`, { headers }),
+          fetch(`${API_BASE}/api/admin/contacts`, { headers }),
         ]);
 
         const prodData = await prodRes.json();
@@ -52,7 +54,9 @@ export const AdminDashboard: React.FC = () => {
           setCategoriesList(catData.data);
           setTotalCategories(catData.data.length);
         }
-        if (contData.success) setTotalContacts(contData.data.totalContacts);
+        if (contData.success) {
+          setTotalContacts(typeof contData.data.unreadContacts === 'number' ? contData.data.unreadContacts : contData.data.totalContacts);
+        }
         if (contactsList.success) setRecentContacts(contactsList.data.slice(0, 5));
       } catch (err) {
         console.error('Failed to fetch dashboard stats:', err);

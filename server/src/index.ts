@@ -10,6 +10,7 @@ import contactRouter from "./routes/contact";
 import authRouter from "./routes/auth";
 import adminProductsRouter from "./routes/adminProducts";
 import adminContactsRouter from "./routes/adminContacts";
+import websiteSettingsRouter from "./routes/websiteSettings";
 
 const app = new Hono();
 
@@ -91,6 +92,8 @@ app.route("/api/contact", contactRouter);
 app.route("/api/auth", authRouter);
 app.route("/api/admin/products", adminProductsRouter);
 app.route("/api/admin/contacts", adminContactsRouter);
+app.route("/api/website-config", websiteSettingsRouter);
+app.route("/api/admin/website-config", websiteSettingsRouter);
 
 // 404 handler
 app.notFound((c) => {

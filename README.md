@@ -111,8 +111,9 @@ DATABASE_URL="postgresql://postgres:1234@localhost:5432/sadida"
 # ตัวอย่าง Neon Cloud:
 # DATABASE_URL="postgresql://neondb_owner:***@ep-fancy-bread-***.aws.neon.tech/neondb?sslmode=require"
 
-# รหัสผ่านเริ่มต้นสำหรับบัญชี Admin
-ADMIN_INITIAL_PASSWORD=12345
+# รหัสผ่านเริ่มต้นสำหรับบัญชี Admin (กำหนดใน Environment Variable เท่านั้น)
+ADMIN_INITIAL_PASSWORD=your_secure_admin_password
+JWT_SECRET=your_jwt_secret_token
 ```
 
 ### 4.3 การเปิดใช้งานเซิร์ฟเวอร์ (Development Mode)
@@ -132,10 +133,10 @@ npm run dev
 # หน้าเว็บไซต์จะเปิดขึ้นที่: http://localhost:5173
 ```
 
-### 4.4 บัญชีผู้ดูแลระบบสำหรับทดสอบ (Test Admin Account)
+### 4.4 บัญชีผู้ดูแลระบบสำหรับทดสอบ (Admin Account)
 - **URL เข้าสู่ระบบ:** [http://localhost:5173/admin/login](http://localhost:5173/admin/login)
 - **ชื่อผู้ใช้ (Username):** `Admin Sadida` หรือใช้ **เบอร์โทรศัพท์:** `0812345678`
-- **รหัสผ่าน (Password):** `12345` (ตามค่า `ADMIN_INITIAL_PASSWORD`)
+- **รหัสผ่าน (Password):** ตามที่ระบุไว้ในตัวแปรสภาพแวดล้อม `ADMIN_INITIAL_PASSWORD` ของคุณ (ห้ามเปิดเผยเป็น Plaintext)
 
 ---
 

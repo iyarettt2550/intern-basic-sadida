@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCookie, setCookie, removeCookie } from '../utils/cookies';
+import { getCookie, setCookie, removeCookie, getAdminAuthHeaders } from '../utils/cookies';
+import { API_BASE } from '../utils/productStore';
 
 export interface GlobalBrandConfig {
   brandName: string;
@@ -153,6 +154,66 @@ export const DEFAULT_PAGES: PageConfig[] = [
 ];
 
 /**
+ * Merges raw config object with default configuration safely
+ */
+export function mergeWithDefaults(parsed: any): WebsiteFullConfig {
+  if (!parsed || typeof parsed !== 'object') {
+    return { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
+  }
+
+  let rawBrand: any = DEFAULT_BRAND;
+  let rawPages: any[] = DEFAULT_PAGES;
+
+  if (Array.isArray(parsed)) {
+    rawPages = parsed;
+  } else if (parsed && typeof parsed === 'object') {
+    if (parsed.brand) rawBrand = { ...DEFAULT_BRAND, ...parsed.brand };
+    if (Array.isArray(parsed.pages)) rawPages = parsed.pages;
+  }
+
+  const mergedPages = DEFAULT_PAGES.map((defaultPage) => {
+    const savedPage = rawPages.find((p: any) => p.id === defaultPage.id);
+    if (!savedPage) return defaultPage;
+
+    const savedSections: SectionItem[] = savedPage.sections || [];
+    const mergedSections: SectionItem[] = savedSections.map((savedSection) => {
+      const defaultSection = defaultPage.sections.find((s) => s.id === savedSection.id);
+      return {
+        id: savedSection.id,
+        name: savedSection.name || defaultSection?.name || savedSection.id,
+        visible: savedSection.visible !== false,
+        image: savedSection.image || defaultSection?.image,
+        selectedProductIds:
+          savedSection.selectedProductIds !== undefined
+            ? savedSection.selectedProductIds
+            : defaultSection?.selectedProductIds,
+        texts: {
+          ...defaultSection?.texts,
+          ...savedSection.texts,
+        },
+      };
+    });
+
+    defaultPage.sections.forEach((defSec) => {
+      if (!mergedSections.some((s) => s.id === defSec.id)) {
+        mergedSections.push(defSec);
+      }
+    });
+
+    return {
+      ...defaultPage,
+      ...savedPage,
+      sections: mergedSections,
+    };
+  });
+
+  return {
+    brand: rawBrand,
+    pages: mergedPages,
+  };
+}
+
+/**
  * Load and merge saved website full config (Brand + Pages)
  */
 export function getSavedWebsiteFullConfig(): WebsiteFullConfig {
@@ -161,59 +222,7 @@ export function getSavedWebsiteFullConfig(): WebsiteFullConfig {
     if (!stored) {
       return { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
     }
-
-    const parsed = JSON.parse(stored);
-
-    let rawBrand: any = DEFAULT_BRAND;
-    let rawPages: any[] = DEFAULT_PAGES;
-
-    if (Array.isArray(parsed)) {
-      rawPages = parsed;
-    } else if (parsed && typeof parsed === 'object') {
-      if (parsed.brand) rawBrand = { ...DEFAULT_BRAND, ...parsed.brand };
-      if (Array.isArray(parsed.pages)) rawPages = parsed.pages;
-    }
-
-    const mergedPages = DEFAULT_PAGES.map((defaultPage) => {
-      const savedPage = rawPages.find((p: any) => p.id === defaultPage.id);
-      if (!savedPage) return defaultPage;
-
-      const savedSections: SectionItem[] = savedPage.sections || [];
-      const mergedSections: SectionItem[] = savedSections.map((savedSection) => {
-        const defaultSection = defaultPage.sections.find((s) => s.id === savedSection.id);
-        return {
-          id: savedSection.id,
-          name: savedSection.name || defaultSection?.name || savedSection.id,
-          visible: savedSection.visible !== false,
-          image: savedSection.image || defaultSection?.image,
-          selectedProductIds:
-            savedSection.selectedProductIds !== undefined
-              ? savedSection.selectedProductIds
-              : defaultSection?.selectedProductIds,
-          texts: {
-            ...defaultSection?.texts,
-            ...savedSection.texts,
-          },
-        };
-      });
-
-      defaultPage.sections.forEach((defSec) => {
-        if (!mergedSections.some((s) => s.id === defSec.id)) {
-          mergedSections.push(defSec);
-        }
-      });
-
-      return {
-        ...defaultPage,
-        ...savedPage,
-        sections: mergedSections,
-      };
-    });
-
-    return {
-      brand: rawBrand,
-      pages: mergedPages,
-    };
+    return mergeWithDefaults(JSON.parse(stored));
   } catch {
     return { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
   }
@@ -234,6 +243,30 @@ export function useWebsiteConfig() {
 
   const reload = useCallback(() => {
     setConfig(getSavedWebsiteFullConfig());
+  }, []);
+
+  // Fetch latest config from server database on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchRemoteConfig = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/website-config`);
+        const json = await res.json();
+        if (json.success && json.data && isMounted) {
+          const merged = mergeWithDefaults(json.data);
+          setConfig(merged);
+          try {
+            setCookie(STORAGE_KEY, JSON.stringify(merged));
+          } catch {}
+        }
+      } catch {
+        // Fallback silently to local cache
+      }
+    };
+    fetchRemoteConfig();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -304,18 +337,45 @@ export function useWebsiteConfig() {
     [getSection]
   );
 
-  const saveConfig = useCallback((newConfig: WebsiteFullConfig) => {
+  const saveConfig = useCallback(async (newConfig: WebsiteFullConfig) => {
     setCookie(STORAGE_KEY, JSON.stringify(newConfig));
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
     setConfig(newConfig);
+
+    try {
+      await fetch(`${API_BASE}/api/admin/website-config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
+        },
+        body: JSON.stringify(newConfig),
+      });
+    } catch (err) {
+      console.warn('Failed to sync website config with server:', err);
+    }
   }, []);
 
-  const resetConfig = useCallback(() => {
+  const resetConfig = useCallback(async () => {
     removeCookie(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(new Event(WEBSITE_CONFIG_EVENT));
-    setConfig({ brand: DEFAULT_BRAND, pages: DEFAULT_PAGES });
+    const defaults = { brand: DEFAULT_BRAND, pages: DEFAULT_PAGES };
+    setConfig(defaults);
+
+    try {
+      await fetch(`${API_BASE}/api/admin/website-config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders(),
+        },
+        body: JSON.stringify(defaults),
+      });
+    } catch (err) {
+      console.warn('Failed to reset website config on server:', err);
+    }
   }, []);
 
   return {

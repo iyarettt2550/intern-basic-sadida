@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { loginSchema } from "../validators";
 import { db } from "../db";
 import { users, userRoles } from "../db/schema";
-import { eq, or, ilike } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { generateAdminToken, adminAuthMiddleware } from "../middlewares/auth";
 
 const router = new Hono();
 
@@ -17,7 +18,7 @@ router.post("/login", async (c) => {
       return c.json(
         {
           success: false,
-          error: "Validation failed",
+          error: "ข้อมูลไม่ถูกต้อง",
           details: parsed.error.issues.map((err) => ({
             field: err.path.join("."),
             message: err.message,
@@ -28,16 +29,20 @@ router.post("/login", async (c) => {
     }
 
     const { password } = parsed.data;
-    const username = parsed.data.username || parsed.data.userName;
-    const phone = parsed.data.phone;
+    const rawUsername = (parsed.data.username || parsed.data.userName || "").trim();
+    const rawPhone = (parsed.data.phone || "").trim();
 
-    // Find user by username or phone
+    if (!rawUsername && !rawPhone) {
+      return c.json({ success: false, error: "กรุณาระบุชื่อผู้ใช้หรือเบอร์โทรศัพท์" }, 400);
+    }
+
+    // Parameterized strict condition to prevent SQL injection or wildcards
     const condition =
-      username && phone
-        ? or(eq(users.usersName, username), eq(users.phone, phone))
-        : username
-        ? or(eq(users.usersName, username), ilike(users.usersName, username))
-        : eq(users.phone, phone!);
+      rawUsername && rawPhone
+        ? or(eq(users.usersName, rawUsername), eq(users.phone, rawPhone))
+        : rawUsername
+        ? eq(users.usersName, rawUsername)
+        : eq(users.phone, rawPhone);
 
     const user = await db
       .select({
@@ -55,7 +60,7 @@ router.post("/login", async (c) => {
 
     if (user.length === 0) {
       return c.json(
-        { success: false, error: "ชื่อผู้ใช้ หรือ รหัสผ่านไม่ถูกต้อง" },
+        { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
         401
       );
     }
@@ -66,6 +71,7 @@ router.post("/login", async (c) => {
     const isPasswordValid = bunGlobal
       ? await bunGlobal.password.verify(password, foundUser.passwordHash)
       : await bcrypt.compare(password, foundUser.passwordHash);
+
     if (!isPasswordValid) {
       return c.json(
         { success: false, error: "ชื่อผู้ใช้ เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง" },
@@ -73,7 +79,7 @@ router.post("/login", async (c) => {
       );
     }
 
-    // Only allow Admin or Owner roles
+    // Only allow Admin or Owner roles (r_1)
     if (foundUser.userRolesId !== "r_1") {
       return c.json(
         { success: false, error: "บัญชีนี้ไม่มีสิทธิ์เข้าใช้งานระบบหลังบ้าน" },
@@ -81,9 +87,18 @@ router.post("/login", async (c) => {
       );
     }
 
+    // Generate JWT Token
+    const token = await generateAdminToken({
+      usersId: foundUser.usersId,
+      usersName: foundUser.usersName,
+      phone: foundUser.phone,
+      role: foundUser.roleName || "Admin",
+    });
+
     return c.json({
       success: true,
       message: "เข้าสู่ระบบสำเร็จ",
+      token,
       data: {
         usersId: foundUser.usersId,
         usersName: foundUser.usersName,
@@ -92,20 +107,24 @@ router.post("/login", async (c) => {
       },
     });
   } catch (error: any) {
+    console.error("Login error:", error);
     return c.json(
       {
         success: false,
-        error: "Internal Server Error",
-        details: error?.message,
+        error: "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
       },
       500
     );
   }
 });
 
-// GET /api/auth/me — check session (simple check)
-router.get("/me", async (c) => {
-  return c.json({ success: false, error: "Not authenticated" }, 401);
+// GET /api/auth/me — verify session using JWT Token
+router.get("/me", adminAuthMiddleware, async (c) => {
+  const adminUser = c.get("adminUser" as any);
+  return c.json({
+    success: true,
+    data: adminUser,
+  });
 });
 
 export default router;

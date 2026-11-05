@@ -26,19 +26,21 @@
 เข้าสู่ระบบแอดมิน (ใช้ `userName` หรือ `phone` คู่กับ `password`)
 ```json
 // Request Body
-{ "userName": "Admin Sadida", "password": "12345" }
+{ "userName": "Admin Sadida", "password": "<YOUR_ADMIN_PASSWORD>" }
 // หรือ
-{ "phone": "0812345678", "password": "12345" }
+{ "phone": "0812345678", "password": "<YOUR_ADMIN_PASSWORD>" }
 
 // Response 200 OK
 {
   "success": true,
+  "message": "เข้าสู่ระบบสำเร็จ",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "data": { "usersId": "usr_admin_001", "usersName": "Admin Sadida", "role": "Admin" }
 }
 ```
 
 ### `GET /api/auth/me`
-ตรวจสอบสถานะ Session ของผู้ใช้ปัจจุบัน
+ตรวจสอบสถานะ Session ของผู้ใช้ปัจจุบัน (ต้องการ Header `Authorization: Bearer <token>`)
 
 ---
 

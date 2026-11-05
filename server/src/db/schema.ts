@@ -1,10 +1,10 @@
-import { pgTable, varchar, doublePrecision, text, numeric } from "drizzle-orm/pg-core";
+import { pgTable, varchar, doublePrecision, text, numeric, boolean, timestamp } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // 1. categories
 export const categories = pgTable("categories", {
   categoryId: varchar("category_id", { length: 10 }).primaryKey(),
-  categoryName: varchar("category_name", { length: 50 }).notNull(),
+  categoryName: varchar("category_name", { length: 50 }).notNull().unique(),
 });
 
 // 2. product_detail
@@ -26,16 +26,33 @@ export const product = pgTable("product", {
     .notNull()
     .references(() => categories.categoryId),
   img: text("img").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 // 4. contacts
 export const contacts = pgTable("contacts", {
   contactsId: varchar("contacts_id", { length: 50 }).primaryKey(),
   contactsName: varchar("contacts_name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 25 }).notNull(),
-  phone: varchar("phone", { length: 10 }).notNull(),
-  subject: varchar("subject", { length: 50 }).notNull(),
-  contactsMessage: varchar("contacts_message", { length: 200 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  subject: varchar("subject", { length: 100 }).notNull(),
+  contactsMessage: text("contacts_message").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("unread"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// 5. website_settings
+export const websiteSettings = pgTable("website_settings", {
+  id: varchar("id", { length: 50 }).primaryKey().default("default"),
+  brandName: varchar("brand_name", { length: 100 }),
+  brandTagline: varchar("brand_tagline", { length: 255 }),
+  brandLogo: text("brand_logo"),
+  footerAbout: text("footer_about"),
+  topNotice: varchar("top_notice", { length: 255 }),
+  showTopNotice: boolean("show_top_notice").default(false),
+  configJson: text("config_json").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 // 5. user_roles
