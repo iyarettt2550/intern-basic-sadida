@@ -1,7 +1,7 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Package, Globe, MessageSquare, LogOut } from 'lucide-react';
-import { removeCookie } from '../../utils/cookies';
+import { clearAdminAuthSession } from '../../utils/cookies';
 
 interface AdminSidebarProps {
   userName?: string;
@@ -9,12 +9,10 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ userName, userRole }) => {
-  const navigate = useNavigate();
-
   const handleLogout = () => {
-    removeCookie('sadida_admin');
-    localStorage.removeItem('sadida_admin');
-    navigate('/admin/login');
+    clearAdminAuthSession();
+    // Force a full browser reload to /admin/login to completely flush React state
+    window.location.href = '/admin/login';
   };
 
   const menuItems = [
@@ -25,9 +23,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ userName, userRole }
   ];
 
   return (
-    <aside className="w-64 min-h-screen bg-white border-r-2 border-black flex flex-col">
+    <aside className="w-64 h-screen bg-white border-r-2 border-black flex flex-col flex-shrink-0 select-none z-30">
       {/* Brand section */}
-      <div className="p-6 border-b-2 border-black">
+      <div className="p-6 border-b-2 border-black flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center border-2 border-black shadow-[2px_2px_0px_#000000]">
             <span className="text-white font-black text-sm font-['Space_Grotesk']">S</span>
@@ -50,7 +48,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ userName, userRole }
       </div>
 
       {/* Menu items */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
@@ -69,15 +67,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ userName, userRole }
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t-2 border-black">
+      {/* Logout — Fixed at the bottom of the sidebar at all times */}
+      <div className="p-4 border-t-2 border-black bg-white flex-shrink-0">
         <button
           id="admin-logout-btn"
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-black bg-white border-2 border-black hover:bg-red-50 hover:border-red-500 hover:text-red-600 shadow-[3px_3px_0px_#000000] hover:shadow-[3px_3px_0px_#ef4444] transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl font-black text-sm text-black bg-white border-2 border-black hover:bg-red-500 hover:text-white hover:border-black shadow-[3px_3px_0px_#000000] active:translate-y-0.5 active:shadow-[1px_1px_0px_#000000] transition-all duration-150 cursor-pointer"
+          title="ออกจากระบบ"
         >
-          <LogOut className="w-5 h-5" />
-          <span>Logout</span>
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <span>ออกจากระบบ (Logout)</span>
         </button>
       </div>
     </aside>

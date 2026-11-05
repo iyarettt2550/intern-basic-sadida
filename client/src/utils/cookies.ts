@@ -162,6 +162,46 @@ export function getAdminAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/**
+ * Completely purges all admin authentication data from cookies, localStorage, and sessionStorage
+ */
+export function clearAdminAuthSession(): void {
+  const authKeys = [
+    'sadida_admin',
+    'sadida_admin_token',
+    'admin_token',
+    'auth_token',
+    'token',
+    'jwt',
+  ];
+
+  authKeys.forEach((key) => {
+    removeCookie(key);
+    if (typeof document !== 'undefined') {
+      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/admin; SameSite=Lax`;
+      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=; SameSite=Lax`;
+      document.cookie = `${encodeURIComponent(key)}=; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+    }
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+    try {
+      sessionStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  });
+
+  try {
+    sessionStorage.clear();
+  } catch {
+    // ignore
+  }
+}
+
 // Run cleanup and migration immediately on module load
 if (typeof window !== 'undefined') {
   cleanupBloatedCookies();
