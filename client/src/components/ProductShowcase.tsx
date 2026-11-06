@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import type { Product, CategoryFilter } from '../types';
+import type { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Grid, Sparkles, ArrowRight, GripVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -21,7 +21,6 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
   badge,
   selectedProductIds,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
   const [viewMode, setViewMode] = useState<'carousel' | 'grid'>('carousel');
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -39,25 +38,11 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
   const thumbWidthPercentRef = useRef<number>(30);
   const [thumbWidthPercent] = useState<number>(30);
 
-  // Filter products by selected IDs first (if configured), then by category
-  const baseProducts =
+  // Filter products by selected IDs first (if configured in admin)
+  const filteredProducts =
     selectedProductIds && selectedProductIds.length > 0
       ? products.filter((p) => selectedProductIds.includes(p.proId))
       : products;
-
-  // Extract all unique categories dynamically from base products
-  const availableCategories = React.useMemo(() => {
-    const set = new Set<string>();
-    baseProducts.forEach((p) => {
-      if (p.categoryName) set.add(p.categoryName);
-    });
-    return Array.from(set);
-  }, [baseProducts]);
-
-  const filteredProducts = baseProducts.filter((p) => {
-    if (selectedCategory === 'all') return true;
-    return p.categoryName === selectedCategory;
-  });
 
   // Calculate and apply thumb position directly to DOM for silky smooth 60/120fps
   const updateThumbPosition = useCallback(() => {
@@ -205,35 +190,8 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
           </p>
         </div>
 
-        {/* Filter Tabs & View Toggle */}
+        {/* View Toggle */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center p-1 bg-white border-2 border-black rounded-2xl shadow-[3px_3px_0px_#000000]">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                selectedCategory === 'all'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
-              }`}
-            >
-              ทั้งหมด ({baseProducts.length})
-            </button>
-            {availableCategories.map((catName) => (
-              <button
-                key={catName}
-                onClick={() => setSelectedCategory(catName)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                  selectedCategory === catName
-                    ? 'bg-black text-white shadow-sm'
-                    : 'text-neutral-700 hover:text-black hover:bg-neutral-100'
-                }`}
-              >
-                {catName}
-              </button>
-            ))}
-          </div>
-
           {/* Toggle View Mode */}
           <div className="hidden sm:flex items-center p-1 bg-white border-2 border-black rounded-2xl shadow-[3px_3px_0px_#000000]">
             <button
